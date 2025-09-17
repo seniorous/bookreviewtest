@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>注册 - 书评管理系统</title>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<!-- 配置文件 -->
+<script src="../config.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans",Arial}
+.wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{width:520px;max-width:94vw;border:1px solid #eaeaea;border-radius:12px;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,.04);padding:18px}
+h2{margin:4px 0 14px}
+.row{display:flex;gap:10px}
+.input{display:flex;align-items:center;border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.input input{border:none;outline:none;flex:1;font-size:14px}
+.btn{width:100%;padding:12px 14px;border:none;border-radius:8px;background:#ff6a00;color:#fff;cursor:pointer;margin-top:6px}
+.tip{font-size:13px;color:#666;margin-top:10px}
+a{color:#ff6a00;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h2>免费注册</h2>
+    <form id="form">
+      <div class="row">
+        <div class="input" style="flex:1"><span>👤&nbsp;</span><input name="username" placeholder="用户名" required></div>
+      </div>
+      <div class="row">
+        <div class="input" style="flex:1"><span>📧&nbsp;</span><input type="email" name="email" placeholder="邮箱" required></div>
+      </div>
+      <div class="row">
+        <div class="input" style="flex:1"><span>🔒&nbsp;</span><input type="password" name="password" placeholder="设置登录密码（≥6位）" minlength="6" required></div>
+        <div class="input" style="flex:1"><span>🔒&nbsp;</span><input type="password" name="confirm" placeholder="确认密码" minlength="6" required></div>
+      </div>
+      <button class="btn" type="submit">注册并登录</button>
+    </form>
+    <div class="tip">已有账号？<a href="login.html">去登录</a></div>
+  </div>
+</div>
+
+<script>
+// 初始化Firebase
+firebase.initializeApp(CONFIG.firebase);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+document.getElementById('form').onsubmit = async (e) => {
+  e.preventDefault();
+  
+  try {
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    // 前端验证
+    if (data.password !== data.confirm) {
+      alert('两次密码不一致');
+      return;
+    }
+    
+    // 创建Firebase用户账号
+    const userCredential = await auth.createUserWithEmailAndPassword(data.email, data.password);
+    const user = userCredential.user;
+    
+    // 更新用户显示名称
+    await user.updateProfile({
+      displayName: data.username
+    });
+    
+    // 保存用户详细信息到Firestore
+    await db.collection('users').doc(user.uid).set({
+      username: data.username,
+      email: data.email,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    alert('注册成功，已自动登录！');
+    location.href = '../index.html';
+    
+  } catch (error) {
+    console.error('注册失败:', error);
+    let errorMessage = '注册失败，请重试';
+    
+    switch (error.code) {
+      case 'auth/email-already-in-use':
+        errorMessage = '该邮箱已被注册，请使用其他邮箱或直接登录';
+        break;
+      case 'auth/invalid-email':
+        errorMessage = '邮箱格式不正确';
+        break;
+      case 'auth/weak-password':
+        errorMessage = '密码强度不够，请设置更复杂的密码';
+        break;
+    }
+    
+    alert(errorMessage);
+  }
+};
+
+// 检查是否已登录
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    location.href = '../index.html';
+  }
+});
+</script>
+</body>
+</html>

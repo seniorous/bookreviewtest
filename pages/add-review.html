@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>发布书评 - 书评管理系统</title>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<style>
+*{box-sizing:border-box}body{margin:0;background:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans",Arial}
+.header{position:sticky;top:0;background:#fff;border-bottom:1px solid #eee;padding:12px 16px}
+.container{max-width:900px;margin:20px auto;padding:0 16px}
+h2{margin:6px 0 16px}
+.row{display:flex;gap:10px}
+.input{flex:1;display:flex;align-items:center;border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin-bottom:12px;background:#fff}
+.input input,.input textarea,.input select{border:none;outline:none;flex:1;font-size:14px}
+textarea{min-height:140px;resize:vertical}
+.btn{padding:12px 16px;border:none;border-radius:8px;background:#ff6a00;color:#fff;cursor:pointer}
+.btn:disabled{background:#ccc;cursor:not-allowed}
+.markdown-hint{font-size:12px;color:#666;margin-top:4px;line-height:1.4}
+</style>
+</head>
+<body>
+  <div class="header"><a href="../index.html">← 返回</a></div>
+  <main class="container">
+    <h2>发布书评</h2>
+    <form id="form">
+      <div class="row">
+        <div class="input"><span>📖&nbsp;</span><input name="title" placeholder="书名" required></div>
+        <div class="input"><span>✍️&nbsp;</span><input name="author" placeholder="作者" required></div>
+      </div>
+      <div class="row">
+        <div class="input"><span>⭐&nbsp;</span>
+          <select name="rating" required>
+            <option value="5">5 - 强烈推荐</option>
+            <option value="4">4 - 推荐</option>
+            <option value="3">3 - 一般</option>
+            <option value="2">2 - 不太推荐</option>
+            <option value="1">1 - 不推荐</option>
+          </select>
+        </div>
+        <div class="input"><span>📝&nbsp;</span><input name="rvTitle" placeholder="书评标题" required></div>
+      </div>
+      <div>
+        <div class="input">
+          <textarea name="content" placeholder="书评正文（支持Markdown格式）……&#10;示例：&#10;**粗体** *斜体*&#10;> 引用&#10;- 列表项" required></textarea>
+        </div>
+        <div class="markdown-hint">
+          💡 支持Markdown语法：**粗体**、*斜体*、`代码`、> 引用、# 标题、- 列表等
+        </div>
+      </div>
+      <button class="btn" type="submit" id="submitBtn">提交</button>
+    </form>
+  </main>
+
+<script>
+// 初始化Firebase
+firebase.initializeApp(CONFIG.firebase);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let currentUser = null;
+
+// 检查登录状态
+auth.onAuthStateChanged((user) => {
+  currentUser = user;
+  if (!user) {
+    alert('请先登录');
+    location.href = 'login.html';
+  }
+});
+
+// 查找或创建书籍
+async function findOrCreateBook(title, author) {
+  try {
+    // 查找现有书籍
+    const booksSnapshot = await db.collection('books')
+      .where('title', '==', title)
+      .where('author', '==', author)
+      .get();
+    
+    if (!booksSnapshot.empty) {
+      return booksSnapshot.docs[0].id;
+    }
+    
+    // 创建新书籍
+    const bookRef = await db.collection('books').add({
+      title,
+      author,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    return bookRef.id;
+  } catch (error) {
+    console.error('查找或创建书籍失败:', error);
+    throw error;
+  }
+}
+
+// 表单提交处理
+document.getElementById('form').onsubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!currentUser) {
+    alert('请先登录');
+    return;
+  }
+  
+  const submitBtn = document.getElementById('submitBtn');
+  const formData = new FormData(e.target);
+  const data = Object.fromEntries(formData.entries());
+  
+  try {
+    // 禁用提交按钮
+    submitBtn.disabled = true;
+    submitBtn.textContent = '提交中...';
+    
+    // 查找或创建书籍
+    const bookId = await findOrCreateBook(data.title, data.author);
+    
+    // 创建书评
+    await db.collection('reviews').add({
+      bookId: bookId,
+      userId: currentUser.uid,
+      title: data.rvTitle,
+      content: data.content,
+      rating: Number(data.rating),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    alert('发布成功！');
+    location.href = '../index.html';
+  } catch (error) {
+    console.error('发布失败:', error);
+    alert('发布失败：' + error.message);
+  } finally {
+    // 恢复提交按钮
+    submitBtn.disabled = false;
+    submitBtn.textContent = '提交';
+  }
+};
+</script>
+</body>
+</html>
