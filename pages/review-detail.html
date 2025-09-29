@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>书评详情 - 书评管理系统</title>
+
+<!-- API工具类 -->
+<script src="../js/api.js"></script>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei","Helvetica Neue",Arial;background:#f8f9fa}
+a{color:#ff6a00;text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* 头部导航 */
+.header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid #eee}
+.nav{max-width:1200px;margin:auto;display:flex;align-items:center;gap:20px;padding:12px 16px}
+.brand{font-weight:700;color:#ff6a00}
+.nav-spacer{flex:1}
+.btn{display:inline-block;padding:10px 16px;border:none;border-radius:8px;background:#ff6a00;color:#fff;cursor:pointer;text-decoration:none}
+.btn.secondary{background:#eee;color:#333}
+.btn:hover{text-decoration:none;opacity:0.9}
+
+/* 主容器 */
+.container{max-width:800px;margin:auto;padding:20px 16px}
+
+/* 返回按钮 */
+.back-btn{display:inline-flex;align-items:center;gap:8px;color:#666;margin-bottom:20px;padding:8px 12px;border-radius:8px;transition:all 0.2s}
+.back-btn:hover{background:#f0f0f0;text-decoration:none}
+
+/* 书评内容区 */
+.review-detail{background:#fff;border-radius:12px;padding:30px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+
+/* 书评头部 */
+.review-header{margin-bottom:24px}
+.review-title{font-size:28px;font-weight:700;color:#333;margin:0 0 16px;line-height:1.3}
+.review-meta{display:flex;flex-wrap:wrap;gap:20px;align-items:center;color:#666;font-size:14px;margin-bottom:16px}
+.author-info{display:flex;align-items:center;gap:8px}
+.avatar{width:32px;height:32px;border-radius:50%;background:#f0f0f0}
+.rating{color:#ff6a00;font-size:18px;font-weight:600}
+.book-info{background:#f8f9fa;padding:16px;border-radius:8px;margin-bottom:20px}
+.book-title{font-size:16px;font-weight:600;color:#333;margin-bottom:4px}
+.book-author{color:#666;font-size:14px}
+
+/* 书评内容 */
+.review-content{font-size:16px;line-height:1.7;color:#333;margin-bottom:24px}
+
+/* 互动区域 */
+.interaction-bar{display:flex;align-items:center;gap:16px;padding:16px 0;border-top:1px solid #eee;border-bottom:1px solid #eee;margin-bottom:24px}
+.action-btn{display:flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#666;cursor:pointer;transition:all 0.2s;font-size:14px}
+.action-btn:hover{background:#f8f9fa;border-color:#ccc}
+.action-btn.active{color:#ff6a00;border-color:#ff6a00;background:#fff5f0}
+.action-btn:disabled{opacity:0.6;cursor:not-allowed;pointer-events:none}
+.stats-item{display:flex;align-items:center;gap:4px;color:#999;font-size:14px}
+
+/* Toast提示 */
+.toast{position:fixed;top:20px;right:20px;background:#333;color:#fff;padding:12px 20px;border-radius:8px;z-index:1000;opacity:0;transform:translateX(100%);transition:all 0.3s ease}
+.toast.show{opacity:1;transform:translateX(0)}
+.toast.error{background:#e74c3c}
+.toast.success{background:#27ae60}
+
+/* 评论区域 */
+.comments-section{margin-top:30px}
+.section-title{font-size:20px;font-weight:600;color:#333;margin-bottom:20px}
+
+/* 评论输入框 */
+.comment-form{background:#f8f9fa;padding:20px;border-radius:8px;margin-bottom:24px}
+.comment-textarea{width:100%;min-height:100px;padding:12px;border:1px solid #ddd;border-radius:8px;resize:vertical;font-family:inherit;font-size:14px}
+.comment-actions{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+.char-count{color:#999;font-size:12px}
+.submit-btn{padding:8px 16px;background:#ff6a00;color:#fff;border:none;border-radius:6px;cursor:pointer}
+.submit-btn:disabled{background:#ccc;cursor:not-allowed}
+
+/* 评论列表 */
+.comments-list{space-y:16px}
+.comment-item{background:#fff;padding:16px;border-radius:8px;border:1px solid #eee}
+.comment-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.comment-author{display:flex;align-items:center;gap:8px;font-weight:600;color:#333}
+.comment-time{color:#999;font-size:12px}
+.comment-content{color:#555;line-height:1.6;margin-bottom:8px}
+.comment-actions{display:flex;gap:12px}
+.comment-action{color:#999;font-size:12px;cursor:pointer}
+.comment-action:hover{color:#ff6a00}
+
+/* 回复区域 */
+.reply-item{margin-left:20px;margin-top:12px;padding-left:16px;border-left:3px solid #f0f0f0}
+.reply-form{background:#f8f9fa;padding:16px;border-radius:8px;margin-top:12px}
+.reply-form .comment-textarea{min-height:80px}
+.replies{margin-top:16px}
+
+/* 作者标识 */
+.author-badge{background:#ff6a00;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:6px}
+
+/* 加载状态 */
+.loading{display:flex;justify-content:center;align-items:center;padding:40px;color:#666}
+.loading::after{content:'';width:20px;height:20px;border:2px solid #ff6a00;border-top:2px solid transparent;border-radius:50%;animation:spin 1s linear infinite;margin-left:10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 错误状态 */
+.error{text-align:center;padding:40px;color:#999}
+.error-message{font-size:16px;margin-bottom:16px}
+
+/* 空状态 */
+.empty{text-align:center;padding:40px;color:#999}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .container{padding:16px 12px}
+  .review-detail{padding:20px}
+  .review-title{font-size:24px}
+  .review-meta{flex-direction:column;align-items:flex-start;gap:8px}
+  .interaction-bar{flex-wrap:wrap;gap:12px}
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <nav class="nav">
+    <div class="brand">📚 BookReviewer</div>
+    <div class="nav-spacer"></div>
+    <div id="navButtons">
+      <!-- 导航按钮将通过JS动态插入 -->
+    </div>
+  </nav>
+</header>
+
+<div class="container">
+  <!-- 返回按钮 -->
+  <a href="../index.html" class="back-btn">
+    ← 返回首页
+  </a>
+
+  <!-- 加载状态 -->
+  <div id="loadingState" class="loading">
+    加载中...
+  </div>
+
+  <!-- 错误状态 -->
+  <div id="errorState" class="error" style="display:none">
+    <div class="error-message">加载失败</div>
+    <button class="btn" onclick="loadReviewDetail()">重试</button>
+  </div>
+
+  <!-- 书评详情 -->
+  <div id="reviewDetail" class="review-detail" style="display:none">
+    <!-- 书评头部 -->
+    <div class="review-header">
+      <h1 id="reviewTitle" class="review-title"></h1>
+      <div class="review-meta">
+        <div class="author-info">
+          <div id="authorAvatar" class="avatar"></div>
+          <span id="authorName"></span>
+        </div>
+        <div id="reviewRating" class="rating"></div>
+        <div id="reviewDate"></div>
+        <div class="stats-item">
+          <span>👁️</span>
+          <span id="viewCount">0</span>
+        </div>
+      </div>
+      <div id="bookInfo" class="book-info">
+        <div id="bookTitle" class="book-title"></div>
+        <div id="bookAuthor" class="book-author"></div>
+      </div>
+    </div>
+
+    <!-- 书评内容 -->
+    <div id="reviewContent" class="review-content"></div>
+
+    <!-- 互动区域 -->
+    <div class="interaction-bar">
+      <button id="likeBtn" class="action-btn">
+        <span>❤️</span>
+        <span id="likeText">点赞</span>
+        <span id="likeCount">0</span>
+      </button>
+      <button id="favoriteBtn" class="action-btn">
+        <span>⭐</span>
+        <span id="favoriteText">收藏</span>
+      </button>
+      <div class="stats-item">
+        <span>💬</span>
+        <span id="commentCount">0</span>
+        <span>条评论</span>
+      </div>
+    </div>
+
+    <!-- 评论区域 -->
+    <div class="comments-section">
+      <h3 class="section-title">评论区</h3>
+      
+      <!-- 评论输入框 -->
+      <div id="commentForm" class="comment-form" style="display:none">
+        <textarea id="commentTextarea" class="comment-textarea" placeholder="写下你的评论..."></textarea>
+        <div class="comment-actions">
+          <div class="char-count">
+            <span id="charCount">0</span>/500
+          </div>
+          <button id="submitComment" class="submit-btn">发布评论</button>
+        </div>
+      </div>
+
+      <!-- 未登录提示 -->
+      <div id="loginPrompt" class="comment-form" style="display:none">
+        <p>请先登录后再发表评论</p>
+        <a href="login.html" class="btn">立即登录</a>
+      </div>
+
+      <!-- 评论列表 -->
+      <div id="commentsList" class="comments-list"></div>
+      
+      <!-- 评论加载状态 -->
+      <div id="commentsLoading" class="loading" style="display:none">
+        加载评论中...
+      </div>
+      
+      <!-- 评论空状态 -->
+      <div id="commentsEmpty" class="empty" style="display:none">
+        暂无评论，快来发表第一条评论吧！
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 全局变量
+let currentReviewId;
+let currentUser = null;
+
+// 页面初始化
+document.addEventListener('DOMContentLoaded', async function() {
+  console.log('📖 书评详情页面初始化...');
+  
+  try {
+    // API已在api.js中自动初始化
+    console.log('API已可用');
+    
+    // 获取URL参数中的书评ID
+    const urlParams = new URLSearchParams(window.location.search);
+    currentReviewId = urlParams.get('id');
+    
+    console.log('当前书评ID:', currentReviewId);
+    
+    if (!currentReviewId) {
+      showError('未找到书评ID');
+      return;
+    }
+    
+    // 检查用户登录状态
+    await checkLoginStatus();
+    console.log('登录状态检查完成');
+    
+    // 加载书评详情
+    await loadReviewDetail();
+    console.log('书评详情加载完成');
+    
+    // 绑定事件
+    bindEvents();
+    console.log('事件绑定完成');
+    
+    console.log('✅ 页面初始化完成');
+  } catch (error) {
+    console.error('❌ 页面初始化失败:', error);
+    hideLoading();
+    showError('页面初始化失败: ' + error.message);
+  }
+});
+
+// 检查登录状态
+async function checkLoginStatus() {
+  try {
+    if (!api) {
+      throw new Error('API未初始化');
+    }
+    
+    const response = await api.verifyToken();
+    if (response.success) {
+      currentUser = response.data.user;
+      console.log('✅ 用户已登录:', currentUser.username);
+      updateNavigation(true);
+      showCommentForm();
+    } else {
+      console.log('ℹ️ 用户未登录');
+      updateNavigation(false);
+      showLoginPrompt();
+    }
+  } catch (error) {
+    console.log('检查登录状态失败:', error);
+    updateNavigation(false);
+    showLoginPrompt();
+  }
+}
+
+// 更新导航栏
+function updateNavigation(isLoggedIn) {
+  const navButtons = document.getElementById('navButtons');
+  
+  if (isLoggedIn) {
+    navButtons.innerHTML = `
+      <a href="../pages/add-review.html" class="btn">发布书评</a>
+      <button class="btn secondary" onclick="logout()">退出登录</button>
+    `;
+  } else {
+    navButtons.innerHTML = `
+      <a href="../pages/login.html" class="btn secondary">登录</a>
+      <a href="../pages/register.html" class="btn">注册</a>
+    `;
+  }
+}
+
+// 加载书评详情
+async function loadReviewDetail() {
+  try {
+    console.log('开始加载书评详情，ID:', currentReviewId);
+    
+    if (!api) {
+      throw new Error('API未初始化');
+    }
+    
+    if (!currentReviewId) {
+      throw new Error('书评ID无效');
+    }
+    
+    showLoading();
+    
+    // 先获取书评详情
+    const detailResponse = await api.getReviewById(currentReviewId);
+    console.log('API响应:', detailResponse);
+    
+    if (detailResponse.success) {
+      displayReviewDetail(detailResponse.data);
+      
+      // 异步记录浏览量（不阻塞主流程）
+      recordView().catch(error => {
+        console.log('记录浏览量失败:', error);
+      });
+      
+      // 加载评论
+      await loadComments();
+    } else {
+      hideLoading();
+      showError(detailResponse.message || '加载书评详情失败');
+    }
+  } catch (error) {
+    console.error('加载书评详情失败:', error);
+    hideLoading();
+    showError('网络错误，请稍后重试: ' + error.message);
+  }
+}
+
+// 记录浏览量（静默）
+async function recordView() {
+  try {
+    await api.recordView(currentReviewId);
+  } catch (error) {
+    console.log('记录浏览量失败:', error);
+    // 静默失败，不影响主流程
+  }
+}
+
+// 显示书评详情
+function displayReviewDetail(data) {
+  try {
+    console.log('🔍 开始显示书评详情');
+    console.log('📄 收到的书评数据:', data);
+    
+    // 验证数据结构
+    if (!data) {
+      throw new Error('数据为空');
+    }
+    
+    const { review, user: author, book } = data;
+    console.log('📝 解构数据 - review:', !!review, 'author:', !!author, 'book:', !!book);
+    
+    if (!review || !author || !book) {
+      throw new Error('数据结构不完整 - review:' + !!review + ', author:' + !!author + ', book:' + !!book);
+    }
+    
+    // 更新页面标题
+    document.title = `${review.title} - 书评管理系统`;
+    console.log('✅ 页面标题已更新');
+    
+    // 检查DOM元素是否存在
+    const requiredElements = ['reviewTitle', 'authorName', 'reviewRating', 'reviewDate', 'viewCount', 'bookTitle', 'bookAuthor', 'reviewContent'];
+    for (const elementId of requiredElements) {
+      if (!document.getElementById(elementId)) {
+        throw new Error(`DOM元素不存在: ${elementId}`);
+      }
+    }
+    console.log('✅ 所有必需的DOM元素都存在');
+    
+    // 填充书评信息
+    document.getElementById('reviewTitle').textContent = review.title;
+    document.getElementById('authorName').textContent = author.username || '未知作者';
+    document.getElementById('reviewRating').textContent = '⭐'.repeat(review.rating) + ` (${review.rating}/5)`;
+    document.getElementById('reviewDate').textContent = formatDate(review.created_at);
+    document.getElementById('viewCount').textContent = review.views || 0;
+    console.log('✅ 书评基本信息已填充');
+    
+    // 填充书籍信息
+    document.getElementById('bookTitle').textContent = book.title;
+    document.getElementById('bookAuthor').textContent = `作者：${book.author}`;
+    console.log('✅ 书籍信息已填充');
+    
+    // 填充书评内容
+    document.getElementById('reviewContent').innerHTML = formatContent(review.content);
+    console.log('✅ 书评内容已填充');
+    
+    // 更新互动状态
+    updateInteractionBar(review);
+    console.log('✅ 互动栏已更新');
+    
+    // 隐藏加载状态并显示内容
+    console.log('🔄 准备隐藏加载状态...');
+    hideLoading();
+    console.log('🔄 准备显示书评详情...');
+    showReviewDetail();
+    console.log('🎉 书评详情显示完成！');
+    
+  } catch (error) {
+    console.error('❌ 显示书评详情失败:', error);
+    console.error('❌ 错误堆栈:', error.stack);
+    hideLoading();
+    showError('显示书评详情失败: ' + error.message);
+  }
+}
+
+// 更新互动栏
+function updateInteractionBar(review) {
+  document.getElementById('likeCount').textContent = review.likes_count || 0;
+  document.getElementById('commentCount').textContent = review.comments_count || 0;
+  
+  // 如果用户已登录，更新点赞和收藏状态
+  if (currentUser && review.user_interaction) {
+    const likeBtn = document.getElementById('likeBtn');
+    const favoriteBtn = document.getElementById('favoriteBtn');
+    
+    if (review.user_interaction.is_liked) {
+      likeBtn.classList.add('active');
+      document.getElementById('likeText').textContent = '已点赞';
+    }
+    
+    if (review.user_interaction.is_favorited) {
+      favoriteBtn.classList.add('active');
+      document.getElementById('favoriteText').textContent = '已收藏';
+    }
+  }
+}
+
+// 绑定事件
+function bindEvents() {
+  // 点赞按钮
+  document.getElementById('likeBtn').addEventListener('click', handleLike);
+  
+  // 收藏按钮
+  document.getElementById('favoriteBtn').addEventListener('click', handleFavorite);
+  
+  // 评论提交
+  document.getElementById('submitComment').addEventListener('click', handleSubmitComment);
+  
+  // 评论输入框字数统计
+  document.getElementById('commentTextarea').addEventListener('input', updateCharCount);
+}
+
+// 处理点赞
+async function handleLike() {
+  if (!currentUser) {
+    alert('请先登录');
+    return;
+  }
+  
+  const likeBtn = document.getElementById('likeBtn');
+  const likeText = document.getElementById('likeText');
+  const likeCount = document.getElementById('likeCount');
+  
+  // 获取当前状态
+  const isCurrentlyLiked = likeBtn.classList.contains('active');
+  const currentCount = parseInt(likeCount.textContent) || 0;
+  
+  // 乐观更新UI
+  if (isCurrentlyLiked) {
+    likeBtn.classList.remove('active');
+    likeText.textContent = '点赞';
+    likeCount.textContent = Math.max(0, currentCount - 1);
+  } else {
+    likeBtn.classList.add('active');
+    likeText.textContent = '已点赞';
+    likeCount.textContent = currentCount + 1;
+  }
+  
+  // 禁用按钮防止重复点击
+  likeBtn.disabled = true;
+  
+  try {
+    // 调用API
+    const response = await api.toggleLike(currentReviewId, isCurrentlyLiked);
+    
+    if (response.success) {
+      // 更新为服务器返回的实际数据
+      if (response.data && response.data.likes_count !== undefined) {
+        likeCount.textContent = response.data.likes_count;
+      }
+      
+      // 显示成功提示
+      showToast(isCurrentlyLiked ? '取消点赞成功' : '点赞成功');
+    } else {
+      // API调用失败，回滚UI状态
+      if (isCurrentlyLiked) {
+        likeBtn.classList.add('active');
+        likeText.textContent = '已点赞';
+        likeCount.textContent = currentCount;
+      } else {
+        likeBtn.classList.remove('active');
+        likeText.textContent = '点赞';
+        likeCount.textContent = currentCount;
+      }
+      
+      showToast(response.message || '操作失败，请稍后重试', 'error');
+    }
+  } catch (error) {
+    console.error('点赞操作失败:', error);
+    
+    // 网络错误，回滚UI状态
+    if (isCurrentlyLiked) {
+      likeBtn.classList.add('active');
+      likeText.textContent = '已点赞';
+      likeCount.textContent = currentCount;
+    } else {
+      likeBtn.classList.remove('active');
+      likeText.textContent = '点赞';
+      likeCount.textContent = currentCount;
+    }
+    
+    showToast('网络错误，请稍后重试', 'error');
+  } finally {
+    // 重新启用按钮
+    likeBtn.disabled = false;
+  }
+}
+
+// 处理收藏
+async function handleFavorite() {
+  if (!currentUser) {
+    alert('请先登录');
+    return;
+  }
+  
+  const favoriteBtn = document.getElementById('favoriteBtn');
+  const favoriteText = document.getElementById('favoriteText');
+  
+  // 获取当前状态
+  const isCurrentlyFavorited = favoriteBtn.classList.contains('active');
+  
+  // 乐观更新UI
+  if (isCurrentlyFavorited) {
+    favoriteBtn.classList.remove('active');
+    favoriteText.textContent = '收藏';
+  } else {
+    favoriteBtn.classList.add('active');
+    favoriteText.textContent = '已收藏';
+  }
+  
+  // 禁用按钮防止重复点击
+  favoriteBtn.disabled = true;
+  
+  try {
+    // 调用API
+    const response = await api.toggleFavorite(currentReviewId, isCurrentlyFavorited);
+    
+    if (response.success) {
+      // 显示成功提示
+      showToast(isCurrentlyFavorited ? '取消收藏成功' : '收藏成功');
+    } else {
+      // API调用失败，回滚UI状态
+      if (isCurrentlyFavorited) {
+        favoriteBtn.classList.add('active');
+        favoriteText.textContent = '已收藏';
+      } else {
+        favoriteBtn.classList.remove('active');
+        favoriteText.textContent = '收藏';
+      }
+      
+      showToast(response.message || '操作失败，请稍后重试', 'error');
+    }
+  } catch (error) {
+    console.error('收藏操作失败:', error);
+    
+    // 网络错误，回滚UI状态
+    if (isCurrentlyFavorited) {
+      favoriteBtn.classList.add('active');
+      favoriteText.textContent = '已收藏';
+    } else {
+      favoriteBtn.classList.remove('active');
+      favoriteText.textContent = '收藏';
+    }
+    
+    showToast('网络错误，请稍后重试', 'error');
+  } finally {
+    // 重新启用按钮
+    favoriteBtn.disabled = false;
+  }
+}
+
+// 处理评论提交
+async function handleSubmitComment() {
+  const textarea = document.getElementById('commentTextarea');
+  const submitBtn = document.getElementById('submitComment');
+  const content = textarea.value.trim();
+  
+  if (!content) {
+    showToast('请输入评论内容', 'error');
+    return;
+  }
+  
+  if (content.length > 500) {
+    showToast('评论内容不能超过500字符', 'error');
+    return;
+  }
+  
+  submitBtn.disabled = true;
+  submitBtn.textContent = '发布中...';
+  
+  try {
+    const response = await api.createComment(currentReviewId, content);
+    
+    if (response.success) {
+      showToast('评论发表成功');
+      textarea.value = '';
+      updateCharCount();
+      
+      // 重新加载评论列表
+      await loadComments();
+      
+      // 更新评论数量
+      const commentCount = document.getElementById('commentCount');
+      const currentCount = parseInt(commentCount.textContent) || 0;
+      commentCount.textContent = currentCount + 1;
+    } else {
+      showToast(response.message || '发表评论失败', 'error');
+    }
+  } catch (error) {
+    console.error('发表评论失败:', error);
+    showToast('网络错误，请稍后重试', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '发布评论';
+  }
+}
+
+// 显示回复表单
+function showReplyForm(commentId) {
+  // 隐藏其他回复表单
+  document.querySelectorAll('.reply-form').forEach(form => {
+    form.style.display = 'none';
+  });
+  
+  const replyForm = document.getElementById(`replyForm${commentId}`);
+  const textarea = document.getElementById(`replyTextarea${commentId}`);
+  
+  replyForm.style.display = 'block';
+  textarea.focus();
+  
+  // 绑定字数统计
+  textarea.oninput = () => updateReplyCharCount(commentId);
+}
+
+// 隐藏回复表单
+function hideReplyForm(commentId) {
+  const replyForm = document.getElementById(`replyForm${commentId}`);
+  const textarea = document.getElementById(`replyTextarea${commentId}`);
+  
+  replyForm.style.display = 'none';
+  textarea.value = '';
+  updateReplyCharCount(commentId);
+}
+
+// 提交回复
+async function submitReply(commentId) {
+  const textarea = document.getElementById(`replyTextarea${commentId}`);
+  const content = textarea.value.trim();
+  
+  if (!content) {
+    showToast('请输入回复内容', 'error');
+    return;
+  }
+  
+  if (content.length > 500) {
+    showToast('回复内容不能超过500字符', 'error');
+    return;
+  }
+  
+  try {
+    const response = await api.replyToComment(commentId, content);
+    
+    if (response.success) {
+      showToast('回复发表成功');
+      hideReplyForm(commentId);
+      
+      // 重新加载评论列表
+      await loadComments();
+      
+      // 更新评论数量
+      const commentCount = document.getElementById('commentCount');
+      const currentCount = parseInt(commentCount.textContent) || 0;
+      commentCount.textContent = currentCount + 1;
+    } else {
+      showToast(response.message || '发表回复失败', 'error');
+    }
+  } catch (error) {
+    console.error('发表回复失败:', error);
+    showToast('网络错误，请稍后重试', 'error');
+  }
+}
+
+// 删除评论
+async function deleteComment(commentId) {
+  if (!confirm('确定要删除这条评论吗？')) {
+    return;
+  }
+  
+  try {
+    const response = await api.deleteComment(commentId);
+    
+    if (response.success) {
+      showToast('评论删除成功');
+      
+      // 重新加载评论列表
+      await loadComments();
+      
+      // 更新评论数量
+      const commentCount = document.getElementById('commentCount');
+      const currentCount = parseInt(commentCount.textContent) || 0;
+      commentCount.textContent = Math.max(0, currentCount - 1);
+    } else {
+      showToast(response.message || '删除评论失败', 'error');
+    }
+  } catch (error) {
+    console.error('删除评论失败:', error);
+    showToast('网络错误，请稍后重试', 'error');
+  }
+}
+
+// 更新回复字数统计
+function updateReplyCharCount(commentId) {
+  const textarea = document.getElementById(`replyTextarea${commentId}`);
+  const charCount = document.getElementById(`replyCharCount${commentId}`);
+  
+  if (textarea && charCount) {
+    const length = textarea.value.length;
+    charCount.textContent = length;
+    
+    // 更新提交按钮状态
+    const submitBtn = textarea.parentElement.querySelector('.submit-btn');
+    if (submitBtn) {
+      submitBtn.disabled = length === 0 || length > 500;
+    }
+  }
+}
+
+// 加载评论
+async function loadComments() {
+  try {
+    document.getElementById('commentsLoading').style.display = 'block';
+    document.getElementById('commentsEmpty').style.display = 'none';
+    document.getElementById('commentsList').innerHTML = '';
+    
+    const response = await api.getReviewComments(currentReviewId);
+    
+    if (response.success && response.data.comments) {
+      const comments = response.data.comments;
+      
+      if (comments.length === 0) {
+        document.getElementById('commentsEmpty').style.display = 'block';
+      } else {
+        displayComments(comments);
+      }
+    } else {
+      console.error('加载评论失败:', response.message);
+      document.getElementById('commentsEmpty').style.display = 'block';
+    }
+  } catch (error) {
+    console.error('加载评论失败:', error);
+    document.getElementById('commentsEmpty').style.display = 'block';
+  } finally {
+    document.getElementById('commentsLoading').style.display = 'none';
+  }
+}
+
+// 显示评论列表
+function displayComments(comments) {
+  const commentsList = document.getElementById('commentsList');
+  
+  // 将评论按层级组织
+  const topLevelComments = comments.filter(comment => !comment.parent_id);
+  const repliesMap = {};
+  
+  comments.forEach(comment => {
+    if (comment.parent_id) {
+      if (!repliesMap[comment.parent_id]) {
+        repliesMap[comment.parent_id] = [];
+      }
+      repliesMap[comment.parent_id].push(comment);
+    }
+  });
+  
+  // 渲染顶级评论和回复
+  const commentsHtml = topLevelComments.map(comment => {
+    const replies = repliesMap[comment.id] || [];
+    return renderComment(comment, replies);
+  }).join('');
+  
+  commentsList.innerHTML = commentsHtml;
+}
+
+// 渲染单个评论
+function renderComment(comment, replies = []) {
+  const isAuthor = currentUser && currentUser.id === comment.user_id;
+  const canDelete = isAuthor || (currentUser && currentUser.role === 'admin');
+  
+  const repliesHtml = replies.map(reply => `
+    <div class="reply-item">
+      <div class="comment-header">
+        <div class="comment-author">
+          <div class="avatar"></div>
+          <span>${escapeHtml(reply.username)}</span>
+          ${reply.user_id === comment.review_author_id ? '<span class="author-badge">作者</span>' : ''}
+        </div>
+        <div class="comment-time">${formatDate(reply.created_at)}</div>
+      </div>
+      <div class="comment-content">${escapeHtml(reply.content)}</div>
+      <div class="comment-actions">
+        ${currentUser && currentUser.id !== reply.user_id ? `<span class="comment-action" onclick="showReplyForm(${reply.id})">回复</span>` : ''}
+        ${(currentUser && currentUser.id === reply.user_id) || (currentUser && currentUser.role === 'admin') ? `<span class="comment-action" onclick="deleteComment(${reply.id})">删除</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+  
+  return `
+    <div class="comment-item" data-comment-id="${comment.id}">
+      <div class="comment-header">
+        <div class="comment-author">
+          <div class="avatar"></div>
+          <span>${escapeHtml(comment.username)}</span>
+          ${comment.user_id === comment.review_author_id ? '<span class="author-badge">作者</span>' : ''}
+        </div>
+        <div class="comment-time">${formatDate(comment.created_at)}</div>
+      </div>
+      <div class="comment-content">${escapeHtml(comment.content)}</div>
+      <div class="comment-actions">
+        ${currentUser ? `<span class="comment-action" onclick="showReplyForm(${comment.id})">回复</span>` : ''}
+        ${canDelete ? `<span class="comment-action" onclick="deleteComment(${comment.id})">删除</span>` : ''}
+      </div>
+      <div id="replyForm${comment.id}" class="reply-form" style="display:none">
+        <textarea id="replyTextarea${comment.id}" class="comment-textarea" placeholder="回复 ${escapeHtml(comment.username)}..."></textarea>
+        <div class="comment-actions">
+          <span class="char-count">
+            <span id="replyCharCount${comment.id}">0</span>/500
+          </span>
+          <button onclick="submitReply(${comment.id})" class="submit-btn">发布回复</button>
+          <button onclick="hideReplyForm(${comment.id})" class="submit-btn secondary" style="margin-left:8px">取消</button>
+        </div>
+      </div>
+      ${repliesHtml ? `<div class="replies">${repliesHtml}</div>` : ''}
+    </div>
+  `;
+}
+
+// 更新字数统计
+function updateCharCount() {
+  const textarea = document.getElementById('commentTextarea');
+  const charCount = document.getElementById('charCount');
+  const submitBtn = document.getElementById('submitComment');
+  
+  const length = textarea.value.length;
+  charCount.textContent = length;
+  
+  submitBtn.disabled = length === 0 || length > 500;
+}
+
+// 显示评论输入框
+function showCommentForm() {
+  document.getElementById('commentForm').style.display = 'block';
+  document.getElementById('loginPrompt').style.display = 'none';
+}
+
+// 显示登录提示
+function showLoginPrompt() {
+  document.getElementById('commentForm').style.display = 'none';
+  document.getElementById('loginPrompt').style.display = 'block';
+}
+
+// 退出登录
+async function logout() {
+  try {
+    await api.logout();
+    localStorage.removeItem('auth_token');
+    window.location.href = '../index.html';
+  } catch (error) {
+    console.error('退出登录失败:', error);
+    // 即使API调用失败，也清除本地token
+    localStorage.removeItem('auth_token');
+    window.location.href = '../index.html';
+  }
+}
+
+// 工具函数
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatContent(content) {
+  // 简单的内容格式化，将换行符转换为<br>
+  return content.replace(/\n/g, '<br>');
+}
+
+function showLoading() {
+  console.log('🔄 显示加载状态');
+  document.getElementById('loadingState').style.display = 'block';
+  document.getElementById('errorState').style.display = 'none';
+  document.getElementById('reviewDetail').style.display = 'none';
+}
+
+function hideLoading() {
+  console.log('🔄 隐藏加载状态');
+  document.getElementById('loadingState').style.display = 'none';
+}
+
+function showError(message) {
+  console.log('❌ 显示错误信息:', message);
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('errorState').style.display = 'block';
+  document.getElementById('reviewDetail').style.display = 'none';
+  document.querySelector('.error-message').textContent = message;
+}
+
+function showReviewDetail() {
+  console.log('📖 显示书评详情');
+  const reviewElement = document.getElementById('reviewDetail');
+  if (reviewElement) {
+    reviewElement.style.display = 'block';
+    console.log('✅ 书评详情元素已显示');
+  } else {
+    console.error('❌ 找不到书评详情元素');
+  }
+}
+
+// Toast提示功能
+function showToast(message, type = 'success') {
+  // 移除现有的toast
+  const existingToast = document.querySelector('.toast');
+  if (existingToast) {
+    existingToast.remove();
+  }
+  
+  // 创建新的toast
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  
+  document.body.appendChild(toast);
+  
+  // 显示toast
+  setTimeout(() => {
+    toast.classList.add('show');
+  }, 100);
+  
+  // 3秒后自动隐藏
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 300);
+  }, 3000);
+}
+</script>
+</body>
+</html>

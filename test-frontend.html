@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>前端API集成测试</title>
+<style>
+body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+.test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+.test-section h3 { margin-top: 0; color: #333; }
+.form-group { margin: 10px 0; }
+.form-group label { display: inline-block; width: 100px; }
+.form-group input { padding: 5px; width: 200px; }
+button { padding: 8px 16px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+button:hover { background: #0056b3; }
+button:disabled { background: #ccc; cursor: not-allowed; }
+.result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+.success { background: #d4edda; color: #155724; }
+.error { background: #f8d7da; color: #721c24; }
+</style>
+</head>
+<body>
+<h1>📚 书评管理系统 - 前端API集成测试</h1>
+
+<div class="test-section">
+  <h3>🔗 API连接测试</h3>
+  <button onclick="testHealthCheck()">测试健康检查</button>
+  <div id="health-result" class="result"></div>
+</div>
+
+<div class="test-section">
+  <h3>📝 用户注册测试</h3>
+  <div class="form-group">
+    <label>邮箱:</label>
+    <input type="email" id="reg-email" placeholder="test@example.com">
+  </div>
+  <div class="form-group">
+    <label>用户名:</label>
+    <input type="text" id="reg-username" placeholder="testuser">
+  </div>
+  <div class="form-group">
+    <label>密码:</label>
+    <input type="password" id="reg-password" placeholder="test1234">
+  </div>
+  <div class="form-group">
+    <label>简介:</label>
+    <input type="text" id="reg-bio" placeholder="测试用户简介">
+  </div>
+  <button onclick="testRegister()">注册测试</button>
+  <div id="register-result" class="result"></div>
+</div>
+
+<div class="test-section">
+  <h3>🔐 用户登录测试</h3>
+  <div class="form-group">
+    <label>邮箱:</label>
+    <input type="email" id="login-email" placeholder="test@example.com">
+  </div>
+  <div class="form-group">
+    <label>密码:</label>
+    <input type="password" id="login-password" placeholder="test1234">
+  </div>
+  <button onclick="testLogin()">登录测试</button>
+  <div id="login-result" class="result"></div>
+</div>
+
+<div class="test-section">
+  <h3>👤 用户信息测试</h3>
+  <button onclick="testProfile()">获取用户信息</button>
+  <button onclick="testLogout()">退出登录</button>
+  <div id="profile-result" class="result"></div>
+</div>
+
+<div class="test-section">
+  <h3>📊 当前状态</h3>
+  <button onclick="showCurrentStatus()">显示当前状态</button>
+  <div id="status-result" class="result"></div>
+</div>
+
+<!-- 引入API工具 -->
+<script src="js/api.js"></script>
+
+<script>
+// 健康检查测试
+async function testHealthCheck() {
+  const resultDiv = document.getElementById('health-result');
+  resultDiv.textContent = '正在测试...';
+  
+  try {
+    const response = await fetch('http://localhost:3001/api/health');
+    const data = await response.json();
+    
+    resultDiv.className = 'result success';
+    resultDiv.innerHTML = `
+      ✅ 健康检查通过<br>
+      服务器状态: ${data.status}<br>
+      数据库: ${data.database.status}<br>
+      运行时间: ${data.uptime}秒<br>
+      内存使用: ${data.memory.used}/${data.memory.total} MB
+    `;
+  } catch (error) {
+    resultDiv.className = 'result error';
+    resultDiv.textContent = `❌ 健康检查失败: ${error.message}`;
+  }
+}
+
+// 注册测试
+async function testRegister() {
+  const resultDiv = document.getElementById('register-result');
+  resultDiv.textContent = '正在注册...';
+  
+  try {
+    const email = document.getElementById('reg-email').value;
+    const username = document.getElementById('reg-username').value;
+    const password = document.getElementById('reg-password').value;
+    const bio = document.getElementById('reg-bio').value;
+    
+    if (!email || !username || !password) {
+      throw new Error('请填写邮箱、用户名和密码');
+    }
+    
+    const response = await api.register(email, username, password, bio);
+    
+    resultDiv.className = 'result success';
+    resultDiv.innerHTML = `
+      ✅ 注册成功<br>
+      用户ID: ${response.data.user.id}<br>
+      用户名: ${response.data.user.username}<br>
+      邮箱: ${response.data.user.email}<br>
+      角色: ${response.data.user.role}
+    `;
+    
+    // 清空表单
+    document.getElementById('reg-email').value = '';
+    document.getElementById('reg-username').value = '';
+    document.getElementById('reg-password').value = '';
+    document.getElementById('reg-bio').value = '';
+    
+  } catch (error) {
+    resultDiv.className = 'result error';
+    resultDiv.textContent = `❌ 注册失败: ${error.message}`;
+  }
+}
+
+// 登录测试
+async function testLogin() {
+  const resultDiv = document.getElementById('login-result');
+  resultDiv.textContent = '正在登录...';
+  
+  try {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    
+    if (!email || !password) {
+      throw new Error('请填写邮箱和密码');
+    }
+    
+    const response = await api.login(email, password);
+    
+    resultDiv.className = 'result success';
+    resultDiv.innerHTML = `
+      ✅ 登录成功<br>
+      用户名: ${response.data.user.username}<br>
+      邮箱: ${response.data.user.email}<br>
+      角色: ${response.data.user.role}<br>
+      令牌已保存到localStorage
+    `;
+    
+  } catch (error) {
+    resultDiv.className = 'result error';
+    resultDiv.textContent = `❌ 登录失败: ${error.message}`;
+  }
+}
+
+// 用户信息测试
+async function testProfile() {
+  const resultDiv = document.getElementById('profile-result');
+  resultDiv.textContent = '正在获取用户信息...';
+  
+  try {
+    if (!api.isLoggedIn()) {
+      throw new Error('请先登录');
+    }
+    
+    const response = await api.getProfile();
+    
+    resultDiv.className = 'result success';
+    resultDiv.innerHTML = `
+      ✅ 用户信息获取成功<br>
+      用户名: ${response.data.user.username}<br>
+      邮箱: ${response.data.user.email}<br>
+      角色: ${response.data.user.role}<br>
+      书评数量: ${response.data.user.total_reviews}<br>
+      收到点赞: ${response.data.user.total_likes_received}<br>
+      收藏数量: ${response.data.user.favorites_count}<br>
+      创建时间: ${new Date(response.data.user.created_at).toLocaleString()}
+    `;
+    
+  } catch (error) {
+    resultDiv.className = 'result error';
+    resultDiv.textContent = `❌ 获取用户信息失败: ${error.message}`;
+  }
+}
+
+// 退出登录测试
+async function testLogout() {
+  const resultDiv = document.getElementById('profile-result');
+  
+  try {
+    await api.logout();
+    resultDiv.className = 'result success';
+    resultDiv.textContent = '✅ 退出登录成功，localStorage已清空';
+    
+  } catch (error) {
+    resultDiv.className = 'result error';
+    resultDiv.textContent = `❌ 退出登录失败: ${error.message}`;
+  }
+}
+
+// 显示当前状态
+function showCurrentStatus() {
+  const resultDiv = document.getElementById('status-result');
+  const isLoggedIn = api.isLoggedIn();
+  const currentUser = api.getCurrentUser();
+  
+  if (isLoggedIn && currentUser) {
+    resultDiv.className = 'result success';
+    resultDiv.innerHTML = `
+      🟢 已登录状态<br>
+      当前用户: ${currentUser.username}<br>
+      邮箱: ${currentUser.email}<br>
+      角色: ${currentUser.role}<br>
+      令牌: ${api.token ? '已存储' : '未存储'}
+    `;
+  } else {
+    resultDiv.className = 'result';
+    resultDiv.textContent = '🔴 未登录状态';
+  }
+}
+
+// 页面加载时显示状态
+window.addEventListener('load', () => {
+  showCurrentStatus();
+  
+  // 设置默认测试数据
+  const now = Date.now();
+  document.getElementById('reg-email').value = `test${now}@example.com`;
+  document.getElementById('reg-username').value = `user${now}`;
+  document.getElementById('reg-password').value = 'test1234';
+  document.getElementById('reg-bio').value = '前端集成测试用户';
+});
+</script>
+
+</body>
+</html>

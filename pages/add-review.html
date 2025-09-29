@@ -5,143 +5,448 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>发布书评 - 书评管理系统</title>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<!-- API工具 -->
+<script src="../js/api.js"></script>
 
 <style>
 *{box-sizing:border-box}body{margin:0;background:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans",Arial}
-.header{position:sticky;top:0;background:#fff;border-bottom:1px solid #eee;padding:12px 16px}
-.container{max-width:900px;margin:20px auto;padding:0 16px}
-h2{margin:6px 0 16px}
-.row{display:flex;gap:10px}
-.input{flex:1;display:flex;align-items:center;border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin-bottom:12px;background:#fff}
-.input input,.input textarea,.input select{border:none;outline:none;flex:1;font-size:14px}
-textarea{min-height:140px;resize:vertical}
-.btn{padding:12px 16px;border:none;border-radius:8px;background:#ff6a00;color:#fff;cursor:pointer}
-.btn:disabled{background:#ccc;cursor:not-allowed}
-.markdown-hint{font-size:12px;color:#666;margin-top:4px;line-height:1.4}
+.header{position:sticky;top:0;background:#fff;border-bottom:1px solid #eee;padding:12px 16px;z-index:10}
+.header a{color:#ff6a00;text-decoration:none}
+.container{max-width:800px;margin:20px auto;padding:0 16px}
+.card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+h2{margin:0 0 24px;color:#333}
+.form-group{margin-bottom:20px}
+label{display:block;margin-bottom:6px;font-weight:500;color:#333}
+.input{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;transition:border-color 0.2s}
+.input:focus{outline:none;border-color:#ff6a00}
+textarea.input{min-height:120px;resize:vertical;font-family:inherit}
+select.input{cursor:pointer}
+.rating-group{display:flex;gap:8px;align-items:center}
+.star{font-size:24px;color:#ddd;cursor:pointer;transition:color 0.2s}
+.star.active{color:#ff6a00}
+.star:hover{color:#ff6a00}
+.btn{padding:12px 24px;border:none;border-radius:8px;background:#ff6a00;color:#fff;cursor:pointer;font-size:16px;transition:all 0.2s}
+.btn:hover:not(:disabled){background:#e55a4f;transform:translateY(-1px)}
+.btn:disabled{background:#ccc;cursor:not-allowed;transform:none}
+.btn.secondary{background:#6c757d}
+.btn.secondary:hover:not(:disabled){background:#5a6268}
+.form-actions{display:flex;gap:12px;margin-top:24px}
+.loading{text-align:center;padding:20px;color:#666}
+.error{background:#fee;border:1px solid #fcc;color:#c33;padding:12px;border-radius:8px;margin-bottom:16px}
+.success{background:#efe;border:1px solid #cfc;color:#363;padding:12px;border-radius:8px;margin-bottom:16px}
+.book-search{position:relative}
+.book-suggestions{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:100}
+.book-suggestion{padding:12px;cursor:pointer;border-bottom:1px solid #eee}
+.book-suggestion:hover{background:#f8f9fa}
+.book-suggestion:last-child{border-bottom:none}
+.help-text{font-size:12px;color:#666;margin-top:4px}
 </style>
 </head>
 <body>
-  <div class="header"><a href="../index.html">← 返回</a></div>
+  <div class="header">
+    <a href="../index.html">← 返回首页</a>
+  </div>
+  
   <main class="container">
+    <div class="card">
     <h2>发布书评</h2>
-    <form id="form">
-      <div class="row">
-        <div class="input"><span>📖&nbsp;</span><input name="title" placeholder="书名" required></div>
-        <div class="input"><span>✍️&nbsp;</span><input name="author" placeholder="作者" required></div>
-      </div>
-      <div class="row">
-        <div class="input"><span>⭐&nbsp;</span>
-          <select name="rating" required>
-            <option value="5">5 - 强烈推荐</option>
-            <option value="4">4 - 推荐</option>
-            <option value="3">3 - 一般</option>
-            <option value="2">2 - 不太推荐</option>
-            <option value="1">1 - 不推荐</option>
-          </select>
+      
+      <div id="message"></div>
+      
+      <form id="reviewForm">
+        <!-- 书籍信息 -->
+        <div class="form-group">
+          <label for="bookTitle">书籍名称 *</label>
+          <div class="book-search">
+            <input type="text" id="bookTitle" class="input" placeholder="请输入书名" required>
+            <div id="bookSuggestions" class="book-suggestions" style="display:none;"></div>
+          </div>
+          <div class="help-text">输入书名，系统会自动搜索匹配的书籍</div>
         </div>
-        <div class="input"><span>📝&nbsp;</span><input name="rvTitle" placeholder="书评标题" required></div>
-      </div>
-      <div>
-        <div class="input">
-          <textarea name="content" placeholder="书评正文（支持Markdown格式）……&#10;示例：&#10;**粗体** *斜体*&#10;> 引用&#10;- 列表项" required></textarea>
+        
+        <div class="form-group">
+          <label for="bookAuthor">作者 *</label>
+          <input type="text" id="bookAuthor" class="input" placeholder="请输入作者姓名" required>
         </div>
-        <div class="markdown-hint">
-          💡 支持Markdown语法：**粗体**、*斜体*、`代码`、> 引用、# 标题、- 列表等
+        
+        <div class="form-group">
+          <label for="isbn">ISBN（可选）</label>
+          <input type="text" id="isbn" class="input" placeholder="请输入ISBN号码">
         </div>
+        
+        <div class="form-group">
+          <label for="publisher">出版社（可选）</label>
+          <input type="text" id="publisher" class="input" placeholder="请输入出版社">
+        </div>
+        
+        <div class="form-group">
+          <label for="publishYear">出版年份（可选）</label>
+          <input type="number" id="publishYear" class="input" placeholder="如：2023" min="1900" max="2030">
+        </div>
+        
+        <!-- 书评信息 -->
+        <div class="form-group">
+          <label for="reviewTitle">书评标题 *</label>
+          <input type="text" id="reviewTitle" class="input" placeholder="请输入书评标题" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="rating">评分 *</label>
+          <div class="rating-group">
+            <span class="star" data-rating="1">⭐</span>
+            <span class="star" data-rating="2">⭐</span>
+            <span class="star" data-rating="3">⭐</span>
+            <span class="star" data-rating="4">⭐</span>
+            <span class="star" data-rating="5">⭐</span>
+            <span id="ratingText" style="margin-left:10px;color:#666;">请选择评分</span>
+          </div>
       </div>
-      <button class="btn" type="submit" id="submitBtn">提交</button>
+        
+        <div class="form-group">
+          <label for="content">书评内容 *</label>
+          <textarea id="content" class="input" placeholder="分享您的读书感受和见解..." required></textarea>
+          <div class="help-text">至少10字，最多5000字</div>
+        </div>
+        
+        <div class="form-actions">
+          <button type="submit" class="btn" id="submitBtn">发布书评</button>
+          <button type="button" class="btn secondary" onclick="resetForm()">重置</button>
+      </div>
     </form>
+    </div>
   </main>
 
 <script>
-// 初始化Firebase
-firebase.initializeApp(CONFIG.firebase);
-const db = firebase.firestore();
-const auth = firebase.auth();
+// 全局变量
+let currentRating = 0;
+let selectedBookId = null;
+let isSubmitting = false;
 
-let currentUser = null;
-
-// 检查登录状态
-auth.onAuthStateChanged((user) => {
-  currentUser = user;
-  if (!user) {
-    alert('请先登录');
-    location.href = 'login.html';
-  }
-});
-
-// 查找或创建书籍
-async function findOrCreateBook(title, author) {
-  try {
-    // 查找现有书籍
-    const booksSnapshot = await db.collection('books')
-      .where('title', '==', title)
-      .where('author', '==', author)
-      .get();
-    
-    if (!booksSnapshot.empty) {
-      return booksSnapshot.docs[0].id;
-    }
-    
-    // 创建新书籍
-    const bookRef = await db.collection('books').add({
-      title,
-      author,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    return bookRef.id;
-  } catch (error) {
-    console.error('查找或创建书籍失败:', error);
-    throw error;
-  }
-}
-
-// 表单提交处理
-document.getElementById('form').onsubmit = async (e) => {
-  e.preventDefault();
+// 页面初始化
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('📝 书评发布页面初始化...');
   
-  if (!currentUser) {
-    alert('请先登录');
+  // 检查登录状态
+  if (!api.isLoggedIn()) {
+    showMessage('请先登录后再发布书评', 'error');
+    setTimeout(() => {
+      window.location.href = 'login.html';
+    }, 2000);
     return;
   }
   
-  const submitBtn = document.getElementById('submitBtn');
-  const formData = new FormData(e.target);
-  const data = Object.fromEntries(formData.entries());
+  // 初始化评分系统
+  initRatingSystem();
   
-  try {
-    // 禁用提交按钮
-    submitBtn.disabled = true;
-    submitBtn.textContent = '提交中...';
-    
-    // 查找或创建书籍
-    const bookId = await findOrCreateBook(data.title, data.author);
-    
-    // 创建书评
-    await db.collection('reviews').add({
-      bookId: bookId,
-      userId: currentUser.uid,
-      title: data.rvTitle,
-      content: data.content,
-      rating: Number(data.rating),
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  // 初始化书籍搜索
+  initBookSearch();
+  
+  // 绑定表单提交事件
+  document.getElementById('reviewForm').addEventListener('submit', handleSubmit);
+  
+  console.log('✅ 页面初始化完成');
+});
+
+// 初始化评分系统
+function initRatingSystem() {
+  const stars = document.querySelectorAll('.star');
+  const ratingText = document.getElementById('ratingText');
+  
+  stars.forEach((star, index) => {
+    star.addEventListener('click', () => {
+      currentRating = index + 1;
+      updateStars();
+      updateRatingText();
     });
     
-    alert('发布成功！');
-    location.href = '../index.html';
+    star.addEventListener('mouseover', () => {
+      const hoverRating = index + 1;
+      updateStarsHover(hoverRating);
+    });
+  });
+  
+  document.querySelector('.rating-group').addEventListener('mouseleave', () => {
+    updateStars();
+  });
+}
+
+function updateStars() {
+  const stars = document.querySelectorAll('.star');
+  stars.forEach((star, index) => {
+    star.classList.toggle('active', index < currentRating);
+  });
+}
+
+function updateStarsHover(hoverRating) {
+  const stars = document.querySelectorAll('.star');
+  stars.forEach((star, index) => {
+    star.style.color = index < hoverRating ? '#ff6a00' : '#ddd';
+  });
+}
+
+function updateRatingText() {
+  const ratingText = document.getElementById('ratingText');
+  const texts = ['', '很差', '一般', '不错', '很好', '极佳'];
+  ratingText.textContent = `${currentRating}/5 - ${texts[currentRating]}`;
+}
+
+// 初始化书籍搜索
+function initBookSearch() {
+  const bookTitleInput = document.getElementById('bookTitle');
+  const suggestionsDiv = document.getElementById('bookSuggestions');
+  
+  let searchTimeout;
+  
+  bookTitleInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    
+    clearTimeout(searchTimeout);
+    
+    if (query.length < 2) {
+      hideSuggestions();
+      return;
+    }
+    
+    searchTimeout = setTimeout(() => {
+      searchBooks(query);
+    }, 300);
+  });
+  
+  // 点击外部关闭建议
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.book-search')) {
+      hideSuggestions();
+    }
+  });
+}
+
+// 搜索书籍
+async function searchBooks(query) {
+  try {
+    console.log('🔍 搜索书籍:', query);
+    
+    const response = await api.request(`/books?search=${encodeURIComponent(query)}&limit=5`);
+    
+    if (response.success && response.data.books.length > 0) {
+      showBookSuggestions(response.data.books);
+    } else {
+      hideSuggestions();
+    }
+    
   } catch (error) {
-    console.error('发布失败:', error);
-    alert('发布失败：' + error.message);
-  } finally {
-    // 恢复提交按钮
-    submitBtn.disabled = false;
-    submitBtn.textContent = '提交';
+    console.error('❌ 搜索书籍失败:', error);
+    hideSuggestions();
   }
-};
+}
+
+// 显示书籍建议
+function showBookSuggestions(books) {
+  const suggestionsDiv = document.getElementById('bookSuggestions');
+  
+  suggestionsDiv.innerHTML = books.map(book => `
+    <div class="book-suggestion" onclick="selectBook(${book.id}, '${escapeHtml(book.title)}', '${escapeHtml(book.author)}')">
+      <div><strong>${escapeHtml(book.title)}</strong></div>
+      <div style="font-size:12px;color:#666;">${escapeHtml(book.author)} ${book.publish_year ? '(' + book.publish_year + ')' : ''}</div>
+    </div>
+  `).join('');
+  
+  suggestionsDiv.style.display = 'block';
+}
+
+// 隐藏书籍建议
+function hideSuggestions() {
+  document.getElementById('bookSuggestions').style.display = 'none';
+}
+
+// 选择书籍
+function selectBook(bookId, title, author) {
+  selectedBookId = bookId;
+  document.getElementById('bookTitle').value = title;
+  document.getElementById('bookAuthor').value = author;
+  hideSuggestions();
+  
+  console.log('✅ 选择书籍:', { bookId, title, author });
+}
+
+// 处理表单提交
+async function handleSubmit(e) {
+  e.preventDefault();
+  
+  if (isSubmitting) return;
+  
+  // 验证表单
+  if (!validateForm()) {
+    return;
+  }
+  
+  isSubmitting = true;
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = '发布中...';
+  
+  try {
+    // 收集表单数据
+    const formData = collectFormData();
+    
+    console.log('📝 提交书评数据:', formData);
+    
+    // 如果没有选择现有书籍，先创建书籍
+    let bookId = selectedBookId;
+    if (!bookId) {
+      const bookResponse = await api.request('/books', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: formData.bookTitle,
+          author: formData.bookAuthor,
+          isbn: formData.isbn,
+          publisher: formData.publisher,
+          publishYear: formData.publishYear
+        })
+      });
+      
+      if (bookResponse.success) {
+        bookId = bookResponse.data.book.id;
+        console.log('✅ 创建书籍成功:', bookId);
+      } else {
+        throw new Error(bookResponse.message || '创建书籍失败');
+      }
+    }
+    
+    // 创建书评
+    const reviewResponse = await api.request('/reviews', {
+      method: 'POST',
+      body: JSON.stringify({
+        book_id: bookId,
+        title: formData.reviewTitle,
+        content: formData.content,
+        rating: formData.rating
+      })
+    });
+    
+    if (reviewResponse.success) {
+      showMessage('书评发布成功！', 'success');
+      
+      // 2秒后跳转到首页
+      setTimeout(() => {
+        window.location.href = '../index.html';
+      }, 2000);
+      
+    } else {
+      throw new Error(reviewResponse.message || '发布书评失败');
+    }
+    
+  } catch (error) {
+    console.error('❌ 发布书评失败:', error);
+    showMessage('发布失败: ' + error.message, 'error');
+  } finally {
+    isSubmitting = false;
+    submitBtn.disabled = false;
+    submitBtn.textContent = '发布书评';
+  }
+}
+
+// 验证表单
+function validateForm() {
+  const bookTitle = document.getElementById('bookTitle').value.trim();
+  const bookAuthor = document.getElementById('bookAuthor').value.trim();
+  const reviewTitle = document.getElementById('reviewTitle').value.trim();
+  const content = document.getElementById('content').value.trim();
+  
+  if (!bookTitle) {
+    showMessage('请输入书籍名称', 'error');
+    return false;
+  }
+  
+  if (!bookAuthor) {
+    showMessage('请输入作者姓名', 'error');
+    return false;
+  }
+  
+  if (!reviewTitle) {
+    showMessage('请输入书评标题', 'error');
+    return false;
+  }
+  
+  if (!content) {
+    showMessage('请输入书评内容', 'error');
+    return false;
+  }
+  
+  if (content.length < 10) {
+    showMessage('书评内容至少需要100字', 'error');
+    return false;
+  }
+  
+  if (content.length > 5000) {
+    showMessage('书评内容不能超过5000字', 'error');
+    return false;
+  }
+  
+  if (currentRating === 0) {
+    showMessage('请选择评分', 'error');
+    return false;
+  }
+  
+  return true;
+}
+
+// 收集表单数据
+function collectFormData() {
+  return {
+    bookTitle: document.getElementById('bookTitle').value.trim(),
+    bookAuthor: document.getElementById('bookAuthor').value.trim(),
+    isbn: document.getElementById('isbn').value.trim(),
+    publisher: document.getElementById('publisher').value.trim(),
+    publishYear: document.getElementById('publishYear').value ? parseInt(document.getElementById('publishYear').value) : null,
+    reviewTitle: document.getElementById('reviewTitle').value.trim(),
+    content: document.getElementById('content').value.trim(),
+    rating: currentRating
+  };
+}
+
+// 重置表单
+function resetForm() {
+  document.getElementById('reviewForm').reset();
+  currentRating = 0;
+  selectedBookId = null;
+  updateStars();
+  document.getElementById('ratingText').textContent = '请选择评分';
+  hideSuggestions();
+  clearMessage();
+}
+
+// 显示消息
+function showMessage(message, type = 'info') {
+  const messageDiv = document.getElementById('message');
+  messageDiv.className = type;
+  messageDiv.textContent = message;
+  messageDiv.style.display = 'block';
+  
+  // 3秒后自动隐藏（除了成功消息）
+  if (type !== 'success') {
+    setTimeout(() => {
+      clearMessage();
+    }, 3000);
+  }
+}
+
+// 清除消息
+function clearMessage() {
+  const messageDiv = document.getElementById('message');
+  messageDiv.style.display = 'none';
+  messageDiv.textContent = '';
+  messageDiv.className = '';
+}
+
+// 工具函数
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+console.log('📝 书评发布页面脚本加载完成');
 </script>
 </body>
 </html>

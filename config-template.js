@@ -5,15 +5,7 @@
 // 3. config.js 不会被上传到 Git
 
 const CONFIG = {
-  // Firebase 配置
-  firebase: {
-    apiKey: "您的Firebase API Key",
-    authDomain: "您的项目.firebaseapp.com", 
-    projectId: "您的项目ID",
-    messagingSenderId: "您的Sender ID",
-    appId: "您的App ID"
-  },
-  
+
   // GitHub 图床配置
   github: {
     username: '您的GitHub用户名',

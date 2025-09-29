@@ -5,13 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>注册 - 书评管理系统</title>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-
-<!-- 配置文件 -->
-<script src="../config.js"></script>
+<!-- API工具 -->
+<script src="../js/api.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans",Arial}
 .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -47,15 +42,17 @@ a{color:#ff6a00;text-decoration:none}
 </div>
 
 <script>
-// 初始化Firebase
-firebase.initializeApp(CONFIG.firebase);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
 document.getElementById('form').onsubmit = async (e) => {
   e.preventDefault();
   
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  
   try {
+    // 显示加载状态
+    submitBtn.disabled = true;
+    submitBtn.textContent = '注册中...';
+    
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
     
@@ -65,21 +62,24 @@ document.getElementById('form').onsubmit = async (e) => {
       return;
     }
     
-    // 创建Firebase用户账号
-    const userCredential = await auth.createUserWithEmailAndPassword(data.email, data.password);
-    const user = userCredential.user;
+    if (data.password.length < 8) {
+      alert('密码长度至少8位');
+      return;
+    }
     
-    // 更新用户显示名称
-    await user.updateProfile({
-      displayName: data.username
-    });
+    // 检查密码是否包含字母和数字
+    if (!/[a-zA-Z]/.test(data.password) || !/\d/.test(data.password)) {
+      alert('密码必须包含字母和数字');
+      return;
+    }
     
-    // 保存用户详细信息到Firestore
-    await db.collection('users').doc(user.uid).set({
-      username: data.username,
-      email: data.email,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    // 调用注册API
+    const response = await api.register(
+      data.email, 
+      data.username, 
+      data.password, 
+      data.bio || ''
+    );
     
     alert('注册成功，已自动登录！');
     location.href = '../index.html';
@@ -88,25 +88,34 @@ document.getElementById('form').onsubmit = async (e) => {
     console.error('注册失败:', error);
     let errorMessage = '注册失败，请重试';
     
-    switch (error.code) {
-      case 'auth/email-already-in-use':
-        errorMessage = '该邮箱已被注册，请使用其他邮箱或直接登录';
-        break;
-      case 'auth/invalid-email':
-        errorMessage = '邮箱格式不正确';
-        break;
-      case 'auth/weak-password':
-        errorMessage = '密码强度不够，请设置更复杂的密码';
-        break;
+    // 根据API返回的错误信息提供友好提示
+    if (error.message.includes('该邮箱已被注册')) {
+      errorMessage = '该邮箱已被注册，请使用其他邮箱或直接登录';
+    } else if (error.message.includes('该用户名已被使用')) {
+      errorMessage = '该用户名已被使用，请选择其他用户名';
+    } else if (error.message.includes('邮箱格式')) {
+      errorMessage = '请输入有效的邮箱地址';
+    } else if (error.message.includes('密码不符合要求')) {
+      errorMessage = '密码需要8位以上，且包含字母和数字';
+    } else if (error.message.includes('用户名只能包含')) {
+      errorMessage = '用户名只能包含中文、字母、数字和下划线';
+    } else if (error.message.includes('用户名长度')) {
+      errorMessage = '用户名长度必须在2-20位之间';
+    } else if (error.message.includes('请求过于频繁')) {
+      errorMessage = '请求过于频繁，请稍后再试';
     }
     
     alert(errorMessage);
+  } finally {
+    // 恢复按钮状态
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
   }
 };
 
 // 检查是否已登录
-auth.onAuthStateChanged((user) => {
-  if (user) {
+window.addEventListener('load', () => {
+  if (api.isLoggedIn()) {
     location.href = '../index.html';
   }
 });

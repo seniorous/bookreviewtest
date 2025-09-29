@@ -5,17 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>书评管理系统 - 首页</title>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-
-<!-- Markdown支持 -->
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-<!-- 配置文件 -->
-<script src="config.js"></script>
+<!-- API工具类 -->
+<script src="js/api.js"></script>
 
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei","Helvetica Neue",Arial}
@@ -25,54 +16,59 @@ a:hover{text-decoration:underline}
 .nav{max-width:1200px;margin:auto;display:flex;align-items:center;gap:20px;padding:12px 16px}
 .brand{font-weight:700;color:#ff6a00}
 .nav-spacer{flex:1}
-.btn{display:inline-block;padding:10px 16px;border:none;border-radius:8px;background:#ff6a00;color:#fff;cursor:pointer}
+.btn{display:inline-block;padding:10px 16px;border:none;border-radius:8px;background:#ff6a00;color:#fff;cursor:pointer;text-decoration:none}
 .btn.secondary{background:#eee;color:#333}
+.btn:hover{text-decoration:none;opacity:0.9}
 .container{max-width:1200px;margin:auto;padding:20px 16px}
 .search{display:flex;gap:8px;margin:12px 0 20px}
 .search input{flex:1;padding:10px 12px;border:1px solid #ddd;border-radius:8px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-.card{border:1px solid #eee;border-radius:12px;padding:16px;background:#fff}
-.card h3{margin:6px 0 8px;font-size:18px}
-.meta{color:#666;font-size:13px;margin-bottom:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+.card{border:1px solid #eee;border-radius:12px;padding:20px;background:#fff;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(135deg,#ff6a00 0%,#e55a4f 100%);opacity:0;transition:opacity 0.2s}
+.card:hover{box-shadow:0 4px 12px rgba(0,0,0,0.1);transform:translateY(-2px)}
+.card:hover::before{opacity:1}
+.card h3{margin:0 0 8px;font-size:18px;color:#333;line-height:1.3}
+.meta{color:#666;font-size:14px;margin-bottom:12px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.content{color:#555;line-height:1.5;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rating{color:#ff6a00;font-size:16px;margin-bottom:8px;font-weight:600}
+.stats{display:flex;gap:15px;font-size:13px;color:#999;flex-wrap:wrap}
+.stats span{display:flex;align-items:center;gap:4px;white-space:nowrap}
 .badge{display:inline-block;background:#ffe8d9;color:#a34b00;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:6px}
 .empty{padding:60px 0;text-align:center;color:#999}
-.footer{color:#999;font-size:12px;text-align:center;margin:24px 0}
-.star{font-size:14px;color:#ff6a00}
-.contest-banner{background:linear-gradient(135deg,#ff6a00 0%,#e55a4f 100%);color:#fff;border-radius:12px;padding:20px;margin:20px 0;text-align:center;position:relative;overflow:hidden}
-.contest-banner::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent,rgba(255,255,255,0.1),transparent);transform:rotate(45deg);animation:shine 3s infinite}
-@keyframes shine{0%{transform:translateX(-100%) translateY(-100%) rotate(45deg)}100%{transform:translateX(100%) translateY(100%) rotate(45deg)}}
-.contest-title{font-size:24px;font-weight:bold;margin-bottom:10px;position:relative;z-index:1}
-.contest-subtitle{font-size:16px;margin-bottom:15px;opacity:0.9;position:relative;z-index:1}
-.countdown-container{display:flex;justify-content:center;gap:15px;margin:15px 0;position:relative;z-index:1}
-.countdown-item{background:rgba(0,0,0,0.2);border-radius:8px;padding:12px;min-width:60px}
-.countdown-number{display:block;font-size:24px;font-weight:bold;line-height:1}
-.countdown-label{font-size:12px;opacity:0.9;margin-top:5px}
-.countdown-separator{font-size:20px;align-self:center;animation:blink 1s infinite}
-@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0.3}}
-.contest-button{background:rgba(255,255,255,0.2);color:#fff;border:2px solid rgba(255,255,255,0.3);padding:10px 20px;border-radius:25px;font-size:14px;cursor:pointer;transition:all 0.3s;position:relative;z-index:1}
-.contest-button:hover{background:rgba(255,255,255,0.3);border-color:rgba(255,255,255,0.5)}
-.book-cover{width:60px;height:80px;background:#f0f0f0;border-radius:6px;margin-right:12px;background-size:cover;background-position:center;border:1px solid #ddd;cursor:pointer;transition:transform 0.2s}
-.book-cover:hover{transform:scale(1.05)}
-.book-cover.placeholder{display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;text-align:center}
-.card-with-cover{display:flex;align-items:flex-start}
-.card-content{flex:1}
-.cover-upload{position:relative;display:inline-block}
-.cover-upload input{position:absolute;opacity:0;width:100%;height:100%;cursor:pointer}
+.footer{color:#999;font-size:12px;text-align:center;margin:40px 0 20px}
 .loading{display:flex;justify-content:center;align-items:center;padding:40px;color:#666}
 .loading::after{content:'';width:20px;height:20px;border:2px solid #ff6a00;border-top:2px solid transparent;border-radius:50%;animation:spin 1s linear infinite;margin-left:10px}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* Markdown渲染样式 */
-.markdown-content h1,.markdown-content h2,.markdown-content h3{color:#333;margin:16px 0 8px 0}
-.markdown-content h1{font-size:1.5em}
-.markdown-content h2{font-size:1.3em}
-.markdown-content h3{font-size:1.1em}
-.markdown-content p{margin:8px 0}
-.markdown-content code{background:#f5f5f5;padding:2px 4px;border-radius:3px;font-family:'Courier New',monospace}
-.markdown-content pre{background:#f5f5f5;padding:12px;border-radius:6px;overflow-x:auto}
-.markdown-content blockquote{border-left:4px solid #ff6a00;margin:8px 0;padding-left:16px;color:#666}
-.markdown-content ul,.markdown-content ol{padding-left:20px}
-.markdown-content strong{font-weight:bold}
-.markdown-content em{font-style:italic}
+.user-info{display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;border-radius:50%;background:#f0f0f0}
+.contest-banner{background:linear-gradient(135deg,#ff6a00 0%,#e55a4f 100%);color:#fff;border-radius:12px;padding:20px;margin:20px 0;text-align:center}
+.contest-title{font-size:24px;font-weight:bold;margin-bottom:10px}
+.contest-subtitle{font-size:16px;margin-bottom:15px;opacity:0.9}
+.contest-button{background:rgba(255,255,255,0.2);color:#fff;border:2px solid rgba(255,255,255,0.3);padding:10px 20px;border-radius:25px;cursor:pointer;transition:all 0.3s}
+.contest-button:hover{background:rgba(255,255,255,0.3)}
+
+/* Toast提示 */
+.toast{position:fixed;top:20px;right:20px;background:#333;color:#fff;padding:12px 20px;border-radius:8px;z-index:1000;opacity:0;transform:translateX(100%);transition:all 0.3s ease}
+.toast.show{opacity:1;transform:translateX(0)}
+.toast.error{background:#e74c3c}
+.toast.success{background:#27ae60}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .nav{padding:12px;flex-wrap:wrap;gap:12px}
+  .brand{font-size:18px}
+  .container{padding:16px 12px}
+  .grid{grid-template-columns:1fr;gap:16px}
+  .card{padding:16px}
+  .contest-banner{margin:16px 0;padding:16px}
+  .contest-title{font-size:20px}
+  .contest-subtitle{font-size:14px}
+  .search{flex-direction:column;gap:12px}
+  .search input{padding:12px}
+  .stats{gap:12px}
+  .toast{top:10px;right:10px;left:10px;transform:translateY(-100%)}
+  .toast.show{transform:translateY(0)}
+}
 </style>
 </head>
 <body>
@@ -87,382 +83,296 @@ a:hover{text-decoration:underline}
 </header>
 
 <main class="container">
-  <!-- 鉴赏文章征集活动横幅 -->
-  <div class="contest-banner" id="contestBanner">
+  <!-- 活动横幅 -->
+  <div class="contest-banner">
     <div class="contest-title">📖 优秀书评鉴赏文章征集中</div>
     <div class="contest-subtitle">分享你的阅读感悟，赢取精美奖品</div>
-    <div class="countdown-container" id="countdownContainer">
-      <div class="countdown-item">
-        <span class="countdown-number" id="days">15</span>
-        <div class="countdown-label">天</div>
-      </div>
-      <div class="countdown-separator">:</div>
-      <div class="countdown-item">
-        <span class="countdown-number" id="hours">08</span>
-        <div class="countdown-label">时</div>
-      </div>
-      <div class="countdown-separator">:</div>
-      <div class="countdown-item">
-        <span class="countdown-number" id="minutes">30</span>
-        <div class="countdown-label">分</div>
-      </div>
-      <div class="countdown-separator">:</div>
-      <div class="countdown-item">
-        <span class="countdown-number" id="seconds">45</span>
-        <div class="countdown-label">秒</div>
-      </div>
-    </div>
     <button class="contest-button" onclick="location.href='pages/add-review.html'">立即参与</button>
   </div>
   
   <div class="search">
-    <input id="q" placeholder="搜索书名 / 作者 / 书评标题">
-    <button class="btn" id="doSearch">搜索</button>
+    <input id="searchInput" placeholder="搜索书名 / 作者 / 书评标题" onkeypress="handleSearchKeyPress(event)">
+    <button class="btn" onclick="performSearch()">搜索</button>
   </div>
-  <div id="list" class="grid"></div>
+  
+  <div id="reviewsList" class="grid"></div>
+  <div id="loading" class="loading" style="display:none;">加载中...</div>
   <div id="empty" class="empty" style="display:none;">还没有书评，去 <a href="pages/add-review.html">发布一条</a> 试试</div>
   <div class="footer">© 2025 书评管理系统（课程作业演示）</div>
 </main>
 
 <script>
-// 初始化Firebase
-firebase.initializeApp(CONFIG.firebase);
-const db = firebase.firestore();                      
-const auth = firebase.auth();
-
-
-// GitHub配置从CONFIG对象获取
-const GITHUB_CONFIG = CONFIG.github;
-
 // 全局变量
 let currentUser = null;
 let allReviews = [];
+let isLoading = false;
 
-// Firebase数据操作类
-class FirebaseDB {
-  // 获取所有书评（包含关联数据）
-  static async getAllReviews() {
-    try {
-      const reviewsSnapshot = await db.collection('reviews')
-        .orderBy('createdAt', 'desc')
-        .get();
-      
-      const booksSnapshot = await db.collection('books').get();
-      const usersSnapshot = await db.collection('users').get();
-      
-      const books = {};
-      const users = {};
-      
-      booksSnapshot.forEach(doc => {
-        books[doc.id] = { id: doc.id, ...doc.data() };
-      });
-      
-      usersSnapshot.forEach(doc => {
-        users[doc.id] = { id: doc.id, ...doc.data() };
-      });
-      
-      const reviews = reviewsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          book: books[data.bookId] || { title: '未知书籍', author: '未知' },
-          user: users[data.userId] || { username: '匿名用户' },
-          created_at: data.createdAt?.toMillis() || Date.now()
-        };
-      });
-      
-      return reviews;
-    } catch (error) {
-      console.error('获取书评失败:', error);
-      return [];
+// 页面初始化
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('📚 书评管理系统初始化...');
+  
+  // 检查登录状态
+  await checkAuthStatus();
+  
+  // 加载书评列表
+  await loadReviews();
+  
+  console.log('✅ 页面初始化完成');
+});
+
+// 检查认证状态
+async function checkAuthStatus() {
+  try {
+    if (api.isLoggedIn()) {
+      const response = await api.verifyToken();
+      if (response.success) {
+        currentUser = response.data.user;
+        console.log('✅ 用户已登录:', currentUser);
+      } else {
+        // Token无效，清除本地数据
+        await api.logout();
+        currentUser = null;
+      }
     }
+  } catch (error) {
+    console.error('❌ 检查认证状态失败:', error);
+    currentUser = null;
   }
   
-  // 查找或创建书籍
-  static async findOrCreateBook(title, author) {
-    try {
-      const booksSnapshot = await db.collection('books')
-        .where('title', '==', title)
-        .where('author', '==', author)
-        .get();
-      
-      if (!booksSnapshot.empty) {
-        return booksSnapshot.docs[0].id;
-      }
-      
-      // 创建新书籍
-      const bookRef = await db.collection('books').add({
-        title,
-        author,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      return bookRef.id;
-    } catch (error) {
-      console.error('查找或创建书籍失败:', error);
-      throw error;
-    }
-  }
+  renderAuthArea();
+}
+
+// 渲染认证区域
+function renderAuthArea() {
+  const authArea = document.getElementById('authArea');
   
-  // GitHub图床上传封面图片
-  static async uploadCoverToGitHub(file, bookId) {
-    try {
-      // 生成唯一文件名
-      const timestamp = Date.now();
-      const extension = file.name.split('.').pop();
-      const fileName = `cover-${bookId}-${timestamp}.${extension}`;
-      
-      // 将文件转换为Base64
-      const base64Content = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = reader.result.split(',')[1]; // 移除data:image/...;base64,前缀
-          resolve(base64);
-        };
-        reader.readAsDataURL(file);
-      });
-
-      // GitHub API URL
-      const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/contents/images/${fileName}`;
-
-      // 上传到GitHub
-      const response = await fetch(apiUrl, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `token ${GITHUB_CONFIG.token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: `Upload book cover: ${fileName}`,
-          content: base64Content,
-          branch: GITHUB_CONFIG.branch
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`GitHub upload failed: ${response.status} - ${errorData.message || 'Unknown error'}`);
-      }
-
-      // 返回图片的直接访问URL
-      const downloadURL = `https://raw.githubusercontent.com/${GITHUB_CONFIG.username}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/images/${fileName}`;
-      
-      // 更新书籍封面URL到Firestore
-      await db.collection('books').doc(bookId).update({
-        cover: downloadURL
-      });
-      
-      return downloadURL;
-    } catch (error) {
-      console.error('GitHub图床上传失败:', error);
-      throw error;
-    }
+  if (currentUser) {
+    authArea.innerHTML = `
+      <div class="user-info">
+        <div class="avatar"></div>
+        <span>欢迎，${currentUser.username}</span>
+        <button class="btn secondary" onclick="logout()">退出</button>
+      </div>
+    `;
+  } else {
+    authArea.innerHTML = `
+      <a href="pages/login.html" class="btn secondary">登录</a>
+      <a href="pages/register.html" class="btn">注册</a>
+    `;
   }
 }
 
-// --- 视图 ---
-const elAuth = document.getElementById('authArea');
-const elList = document.getElementById('list');
-const elEmpty = document.getElementById('empty');
-const elQ = document.getElementById('q');
+// 加载书评列表
+async function loadReviews() {
+  if (isLoading) return;
+  
+  isLoading = true;
+  showLoading();
+  
+  try {
+    console.log('📚 正在加载书评列表...');
+    
+    // 获取书评列表
+    const response = await api.request('/reviews?limit=50');
+    
+    if (response.success) {
+      allReviews = response.data.reviews || [];
+      console.log(`✅ 加载了 ${allReviews.length} 条书评`);
+      renderReviews(allReviews);
+    } else {
+      throw new Error(response.message || '加载失败');
+    }
+    
+  } catch (error) {
+    console.error('❌ 加载书评失败:', error);
+    showError('加载书评失败: ' + error.message);
+  } finally {
+    isLoading = false;
+    hideLoading();
+  }
+}
 
-function renderAuth(){
-  if(currentUser){
-    elAuth.innerHTML = `你好，${currentUser.displayName || currentUser.email} 
-      <button class="btn secondary" onclick="logout()">退出</button>`;
-  }else{
-    elAuth.innerHTML = `<a href="pages/login.html">登录</a> / <a href="pages/register.html">注册</a>`;
+// 渲染书评列表
+function renderReviews(reviews) {
+  const reviewsList = document.getElementById('reviewsList');
+  const emptyDiv = document.getElementById('empty');
+  
+  if (!reviews || reviews.length === 0) {
+    reviewsList.innerHTML = '';
+    emptyDiv.style.display = 'block';
+    return;
+  }
+  
+  emptyDiv.style.display = 'none';
+  
+  reviewsList.innerHTML = reviews.map(review => `
+    <div class="card" onclick="viewReview(${review.id})">
+      <h3>${escapeHtml(review.title)}</h3>
+      <div class="meta">
+        <span>📖 ${escapeHtml(review.book_title)}</span>
+        <span>✍️ ${escapeHtml(review.book_author)}</span>
+        <span class="badge">${escapeHtml(review.username)}</span>
+      </div>
+      <div class="rating">
+        ${'⭐'.repeat(review.rating)} (${review.rating}/5)
+      </div>
+      <div class="content">
+        ${escapeHtml(review.content).substring(0, 150)}${review.content.length > 150 ? '...' : ''}
+      </div>
+      <div class="stats">
+        <span>👁️ ${formatNumber(review.views || 0)}</span>
+        <span>❤️ ${formatNumber(review.likes_count || 0)}</span>
+        <span>💬 ${formatNumber(review.comments_count || 0)}</span>
+        <span>📅 ${formatDate(review.created_at)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// 查看书评详情
+function viewReview(reviewId) {
+  // 跳转到书评详情页面
+  console.log('查看书评:', reviewId);
+  window.location.href = `pages/review-detail.html?id=${reviewId}`;
+}
+
+// 搜索功能
+function handleSearchKeyPress(event) {
+  if (event.key === 'Enter') {
+    performSearch();
+  }
+}
+
+async function performSearch() {
+  const query = document.getElementById('searchInput').value.trim();
+  
+  if (!query) {
+    renderReviews(allReviews);
+    return;
+  }
+  
+  console.log('🔍 搜索:', query);
+  
+  // 显示搜索状态
+  showLoading();
+  
+  // 模拟搜索延迟（实际项目中这里会调用后端搜索API）
+  await new Promise(resolve => setTimeout(resolve, 300));
+  
+  // 前端简单搜索（后续可以改为后端搜索）
+  const filteredReviews = allReviews.filter(review => 
+    review.title.toLowerCase().includes(query.toLowerCase()) ||
+    review.book_title.toLowerCase().includes(query.toLowerCase()) ||
+    review.book_author.toLowerCase().includes(query.toLowerCase()) ||
+    review.content.toLowerCase().includes(query.toLowerCase()) ||
+    review.username.toLowerCase().includes(query.toLowerCase())
+  );
+  
+  hideLoading();
+  renderReviews(filteredReviews);
+  
+  if (filteredReviews.length === 0) {
+    showMessage(`没有找到包含 "${query}" 的书评`, 'error');
+  } else {
+    showMessage(`找到 ${filteredReviews.length} 条相关书评`);
   }
 }
 
 // 退出登录
 async function logout() {
   try {
-    await auth.signOut();
+    await api.logout();
     currentUser = null;
-    renderAuth();
-    alert('已退出登录');
+    renderAuthArea();
+    showMessage('已退出登录');
   } catch (error) {
-    alert('退出失败：' + error.message);
+    console.error('❌ 退出登录失败:', error);
+    showError('退出登录失败');
   }
 }
 
-function star(n){ return '★'.repeat(n) + '☆'.repeat(5-n) }
-
-function renderList(reviews = allReviews, query = ''){
-  // 过滤搜索
-  const filteredReviews = query ? reviews.filter(item => {
-    const searchText = query.toLowerCase();
-    return [
-      item.book?.title,
-      item.book?.author,
-      item.title
-    ].some(text => text?.toLowerCase().includes(searchText));
-  }) : reviews;
-  
-  if (filteredReviews.length === 0) {
-    elEmpty.style.display = 'block';
-    elList.style.display = 'none';
-    return;
-  }
-  
-  elEmpty.style.display = 'none';
-  elList.style.display = 'grid';
-
-  elList.innerHTML = filteredReviews.map(item=>`
-    <article class="card card-with-cover">
-      <div class="cover-upload" onclick="changeCover('${item.book.id}')">
-        <div class="book-cover ${!item.book.cover ? 'placeholder' : ''}" 
-             ${item.book.cover ? `style="background-image: url('${item.book.cover}')"` : ''}>
-          ${!item.book.cover ? '点击<br>选择<br>封面' : ''}
-        </div>
-        <input type="file" accept="image/*" onchange="handleCoverUpload(event, '${item.book.id}')" style="display:none">
-      </div>
-      <div class="card-content">
-        <div class="meta">${item.book.title} <span class="badge">${item.book.author}</span></div>
-        <h3>${item.title}</h3>
-        <div class="meta">评分：<span class="star">${star(item.rating)}</span> · 作者：${item.user.username || item.user.email}</div>
-        <div class="markdown-content" style="color:#444;line-height:1.6">${marked.parse(item.content)}</div>
-      </div>
-    </article>
-  `).join('');
-}
-
-document.getElementById('doSearch').onclick = ()=>renderList(allReviews, elQ.value);
-
-// 回车搜索
-elQ.onkeypress = (e) => {
-  if (e.key === 'Enter') {
-    document.getElementById('doSearch').click();
-  }
-};
-
-// 数据加载函数
-async function loadReviews() {
-  try {
-    showLoading();
-    allReviews = await FirebaseDB.getAllReviews();
-    renderList(allReviews);
-  } catch (error) {
-    console.error('加载书评失败:', error);
-    alert('加载数据失败，请刷新重试');
-  } finally {
-    hideLoading();
-  }
-}
-
-// 显示加载状态
+// 工具函数
 function showLoading() {
-  const loadingDiv = document.createElement('div');
-  loadingDiv.id = 'loading';
-  loadingDiv.className = 'loading';
-  loadingDiv.textContent = '正在加载书评...';
-  elList.parentNode.insertBefore(loadingDiv, elList);
-  elList.style.display = 'none';
-  elEmpty.style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
 }
 
 function hideLoading() {
-  const loadingDiv = document.getElementById('loading');
-  if (loadingDiv) {
-    loadingDiv.remove();
-  }
-  elList.style.display = 'grid';
+  document.getElementById('loading').style.display = 'none';
 }
 
-// 倒计时功能
-function initCountdown() {
-  const endTime = new Date().getTime() + (15 * 24 * 60 * 60 * 1000);
-  
-  function updateCountdown() {
-    const now = new Date().getTime();
-    const distance = endTime - now;
-    
-    if (distance > 0) {
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-      
-      document.getElementById('days').textContent = String(days).padStart(2, '0');
-      document.getElementById('hours').textContent = String(hours).padStart(2, '0');
-      document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
-      document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
-    } else {
-      document.getElementById('contestBanner').innerHTML = `
-        <div class="contest-title">📖 征集活动已结束</div>
-        <div class="contest-subtitle">感谢大家的积极参与，获奖结果即将公布</div>
-        <button class="contest-button" onclick="alert('活动已结束，敬请期待下次活动！')">查看结果</button>
-      `;
-    }
-  }
-  
-  updateCountdown();
-  setInterval(updateCountdown, 1000);
+function showMessage(message, type = 'success') {
+  showToast(message, type);
 }
 
-// 封面管理功能
-function changeCover(bookId) {
-  const input = event.currentTarget.querySelector('input[type="file"]');
-  input.click();
+function showError(message) {
+  showToast(message, 'error');
 }
 
-async function handleCoverUpload(event, bookId) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  if (!file.type.startsWith('image/')) {
-    alert('请选择图片文件');
-    return;
+// Toast提示功能
+function showToast(message, type = 'success') {
+  // 移除现有的toast
+  const existingToast = document.querySelector('.toast');
+  if (existingToast) {
+    existingToast.remove();
   }
   
-  if (file.size > 2 * 1024 * 1024) {
-    alert('图片大小不能超过2MB');
-    return;
-  }
+  // 创建新的toast
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
   
-  // 检查GitHub配置
-  if (GITHUB_CONFIG.token === '您的GitHub Personal Access Token') {
-    alert('请先配置GitHub Token！\n请在config.js文件中填写您的Personal Access Token');
-    return;
-  }
+  document.body.appendChild(toast);
   
-  try {
-    showLoading();
-    await FirebaseDB.uploadCoverToGitHub(file, bookId);
-    await loadReviews();
-    alert('封面更新成功！图片已保存到GitHub');
-  } catch (error) {
-    console.error('封面上传详细错误:', error);
-    let errorMessage = '封面上传失败：';
-    
-    if (error.message.includes('GitHub upload failed: 401')) {
-      errorMessage += 'GitHub Token无效，请检查Token权限';
-    } else if (error.message.includes('GitHub upload failed: 404')) {
-      errorMessage += 'GitHub仓库不存在，请检查仓库配置';
-    } else if (error.message.includes('GitHub upload failed: 403')) {
-      errorMessage += 'GitHub权限不足，请检查Token权限是否包含repo';
-    } else {
-      errorMessage += error.message;
-    }
-    
-    alert(errorMessage);
-  } finally {
-    hideLoading();
+  // 显示toast
+  setTimeout(() => {
+    toast.classList.add('show');
+  }, 100);
+  
+  // 3秒后自动隐藏
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.remove();
+      }
+    }, 300);
+  }, 3000);
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now - date);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    return '今天';
+  } else if (diffDays === 1) {
+    return '昨天';
+  } else if (diffDays < 7) {
+    return `${diffDays}天前`;
+  } else {
+    return date.toLocaleDateString('zh-CN');
   }
 }
 
-// 监听认证状态变化
-auth.onAuthStateChanged((user) => {
-  currentUser = user;
-  renderAuth();
-});
+function formatNumber(num) {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M';
+  } else if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'K';
+  }
+  return num.toString();
+}
 
-// 初始化应用
-document.addEventListener('DOMContentLoaded', () => {
-  initCountdown();
-  loadReviews();
-});
+console.log('📚 主页脚本加载完成');
 </script>
 </body>
 </html>

@@ -5,12 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>登录 - 书评管理系统</title>
 
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-
-<!-- 配置文件 -->
-<script src="../config.js"></script>
+<!-- API工具 -->
+<script src="../js/api.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:linear-gradient(120deg,#fff7f0,#ffffff 40%,#f7f7f7);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans",Arial}
 .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -64,46 +60,55 @@
 </div>
 
 <script>
-// 初始化Firebase
-firebase.initializeApp(CONFIG.firebase);
-const auth = firebase.auth();
-
 // 登录处理
 document.getElementById('pwdForm').onsubmit = async (e) => {
   e.preventDefault();
   
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  
   try {
+    // 显示加载状态
+    submitBtn.disabled = true;
+    submitBtn.textContent = '登录中...';
+    
     const formData = new FormData(e.target);
     const email = formData.get('email');
     const password = formData.get('password');
     
-    await auth.signInWithEmailAndPassword(email, password);
+    // 调用登录API
+    const response = await api.login(email, password);
+    
     alert('登录成功！');
     location.href = '../index.html';
     
   } catch (error) {
     console.error('登录失败:', error);
+    
     let errorMessage = '登录失败，请检查邮箱和密码';
     
-    switch (error.code) {
-      case 'auth/user-not-found':
-        errorMessage = '该邮箱未注册，请先注册';
-        break;
-      case 'auth/wrong-password':
-        errorMessage = '密码错误，请重试';
-        break;
-      case 'auth/invalid-email':
-        errorMessage = '邮箱格式不正确';
-        break;
+    // 根据错误信息提供更友好的提示
+    if (error.message.includes('邮箱或密码错误')) {
+      errorMessage = '邮箱或密码错误，请重试';
+    } else if (error.message.includes('账户已被禁用')) {
+      errorMessage = '账户已被禁用，请联系管理员';
+    } else if (error.message.includes('请求过于频繁')) {
+      errorMessage = '请求过于频繁，请稍后再试';
+    } else if (error.message.includes('邮箱格式')) {
+      errorMessage = '请输入有效的邮箱地址';
     }
     
     alert(errorMessage);
+  } finally {
+    // 恢复按钮状态
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
   }
 };
 
 // 检查是否已登录
-auth.onAuthStateChanged((user) => {
-  if (user) {
+window.addEventListener('load', () => {
+  if (api.isLoggedIn()) {
     location.href = '../index.html';
   }
 });
