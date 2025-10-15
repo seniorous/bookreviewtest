@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('user', 'admin') DEFAULT 'user' COMMENT '用户角色：user=普通用户, admin=管理员',
     avatar_url TEXT COMMENT '用户头像URL',
     bio TEXT COMMENT '用户简介',
+    signature VARCHAR(30) COMMENT '个人签名，最多30字符',
+    privacy_settings JSON COMMENT '隐私设置：{"avatar":true,"signature":true,"stats":true,"history":true}',
     status ENUM('active', 'banned') DEFAULT 'active' COMMENT '用户状态',
     total_reviews INT DEFAULT 0 COMMENT '发布的书评总数',
     total_likes_received INT DEFAULT 0 COMMENT '收到的点赞总数',
@@ -177,8 +179,8 @@ CREATE TABLE IF NOT EXISTS system_logs (
 -- 插入默认数据
 
 -- 创建默认管理员用户（密码：admin123，哈希值为bcrypt加密）
-INSERT IGNORE INTO users (email, username, password_hash, role, bio) VALUES
-('admin@bookreviewer.com', '系统管理员', '$2b$10$7QnKmgPn8rMxPRQXWKm6KOXVLIcZwjUANXOGKqVQZrHRHzmKaJ8YS', 'admin', '系统管理员账户，负责平台管理和维护');
+INSERT IGNORE INTO users (email, username, password_hash, role, bio, signature, privacy_settings) VALUES
+('admin@bookreviewer.com', '系统管理员', '$2b$10$7QnKmgPn8rMxPRQXWKm6KOXVLIcZwjUANXOGGKqVQZrHRHzmKaJ8YS', 'admin', '系统管理员账户，负责平台管理和维护', '致力于为用户提供优质的书评平台', '{"avatar":true,"signature":true,"stats":true,"history":true}');
 
 -- 插入默认标签
 INSERT IGNORE INTO tags (name, description, color) VALUES

@@ -13,6 +13,23 @@ class BookReviewerAPI {
     
     console.log('📡 BookReviewerAPI 初始化完成');
     console.log(`🔗 API地址: ${this.baseURL}`);
+    
+    if (this.token) {
+      console.log('🔐 检测到已保存的认证令牌');
+      // 检查是否有用户信息
+      const userInfo = localStorage.getItem('user_info');
+      if (userInfo) {
+        try {
+          const user = JSON.parse(userInfo);
+          console.log('👤 检测到已保存的用户信息:', user.username);
+        } catch (e) {
+          console.warn('⚠️ 用户信息解析失败，清理本地数据');
+          localStorage.removeItem('user_info');
+        }
+      }
+    } else {
+      console.log('📭 未检测到认证令牌，用户未登录');
+    }
   }
 
   /**
@@ -38,6 +55,7 @@ class BookReviewerAPI {
     
     const config = {
       headers: this.getHeaders(),
+      credentials: 'include',  // 关键：允许发送和接收 Cookie
       ...options
     };
 
@@ -90,22 +108,24 @@ class BookReviewerAPI {
   /**
    * 用户登录
    */
-  async login(email, password) {
+  async login(email, password, rememberMe = false) {
     const response = await this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({
         email,
-        password
+        password,
+        rememberMe  // 传递记住我选项
       })
     });
 
     if (response.success) {
-      // 保存令牌和用户信息
+      // 保存令牌和用户信息到 localStorage（用于快速访问）
+      // 实际的Token已经通过Cookie存储，更安全
       this.token = response.data.token;
       localStorage.setItem('auth_token', this.token);
       localStorage.setItem('user_info', JSON.stringify(response.data.user));
       
-      console.log('✅ 用户登录成功');
+      console.log(`✅ 用户登录成功 (记住我: ${rememberMe ? '是' : '否'})`);
     }
 
     return response;
@@ -172,9 +192,9 @@ class BookReviewerAPI {
       const response = await this.request('/auth/verify', {
         method: 'GET'
       });
-      return response.success;
+      return response;
     } catch (error) {
-      return false;
+      return { success: false, message: error.message };
     }
   }
 
@@ -199,33 +219,97 @@ class BookReviewerAPI {
   }
 
   /**
-   * 根据ID获取书评详情
+   * 获取书籍列表
    */
-  async getReviewById(reviewId) {
-    const response = await this.request(`/reviews/${reviewId}`, {
-      method: 'GET'
-    });
-
-    if (response.success) {
-      console.log(`✅ 获取书评详情成功: ${reviewId}`);
-    }
-
-    return response;
+  async getBooks(params = {}) {
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    // 注意：search功能暂未在后端实现
+    
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `/books?${queryString}` : '/books';
+    
+    return await this.request(endpoint);
   }
 
   /**
-   * 记录书评浏览量
+   * 获取书籍详情
    */
-  async recordView(reviewId) {
-    const response = await this.request(`/reviews/${reviewId}/view`, {
-      method: 'POST'
+  async getBook(bookId) {
+    return await this.request(`/books/${bookId}`);
+  }
+
+  /**
+   * 创建书籍
+   */
+  async createBook(bookData) {
+    return await this.request('/books', {
+      method: 'POST',
+      body: JSON.stringify(bookData)
     });
+  }
 
-    if (response.success) {
-      console.log(`📊 浏览量记录成功: ${reviewId}`);
-    }
+  /**
+   * 获取书评列表
+   */
+  async getReviews(params = {}) {
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.book_id) queryParams.append('book_id', params.book_id);
+    if (params.user_id) queryParams.append('user_id', params.user_id);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.sort) queryParams.append('sort', params.sort);
+    
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `/reviews?${queryString}` : '/reviews';
+    
+    return await this.request(endpoint);
+  }
 
-    return response;
+  /**
+   * 获取书评详情（根据ID）
+   * 别名：getReviewById 保持向后兼容
+   */
+  async getReview(reviewId) {
+    return await this.request(`/reviews/${reviewId}`);
+  }
+  
+  // 兼容旧代码的别名
+  async getReviewById(reviewId) {
+    return await this.getReview(reviewId);
+  }
+
+  /**
+   * 创建书评
+   */
+  async createReview(reviewData) {
+    return await this.request('/reviews', {
+      method: 'POST',
+      body: JSON.stringify(reviewData)
+    });
+  }
+
+  /**
+   * 更新书评
+   */
+  async updateReview(reviewId, reviewData) {
+    return await this.request(`/reviews/${reviewId}`, {
+      method: 'PUT',
+      body: JSON.stringify(reviewData)
+    });
+  }
+
+  /**
+   * 删除书评
+   */
+  async deleteReview(reviewId) {
+    return await this.request(`/reviews/${reviewId}`, {
+      method: 'DELETE'
+    });
   }
 
   /**
@@ -311,12 +395,35 @@ class BookReviewerAPI {
   }
 
   /**
-   * 获取书评评论列表
+   * 记录书评浏览量
    */
-  async getReviewComments(reviewId, page = 1, limit = 20) {
-    const response = await this.request(`/comments/reviews/${reviewId}?page=${page}&limit=${limit}`, {
-      method: 'GET'
+  async recordView(reviewId) {
+    const response = await this.request(`/reviews/${reviewId}/view`, {
+      method: 'POST'
     });
+
+    if (response.success) {
+      console.log(`📊 浏览量记录成功: ${reviewId}`);
+    }
+
+    return response;
+  }
+
+  /**
+   * 获取书评评论列表
+   * 别名：getReviewComments 保持向后兼容
+   */
+  async getComments(reviewId, params = {}) {
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.sort) queryParams.append('sort', params.sort);
+    
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `/comments/reviews/${reviewId}?${queryString}` : `/comments/reviews/${reviewId}`;
+    
+    const response = await this.request(endpoint);
 
     if (response.success) {
       console.log(`💬 获取评论列表成功: ${reviewId}`);
@@ -324,17 +431,24 @@ class BookReviewerAPI {
 
     return response;
   }
+  
+  // 兼容旧代码的别名
+  async getReviewComments(reviewId, page = 1, limit = 20) {
+    return await this.getComments(reviewId, { page, limit });
+  }
 
   /**
    * 发表评论
    */
   async createComment(reviewId, content, parentId = null) {
+    const requestBody = { content };
+    if (parentId) {
+      requestBody.parent_id = parentId;
+    }
+    
     const response = await this.request(`/comments/reviews/${reviewId}`, {
       method: 'POST',
-      body: JSON.stringify({
-        content,
-        parent_id: parentId
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (response.success) {
@@ -346,13 +460,12 @@ class BookReviewerAPI {
 
   /**
    * 回复评论
+   * 别名：replyToComment 保持向后兼容
    */
-  async replyToComment(commentId, content) {
+  async replyComment(commentId, content) {
     const response = await this.request(`/comments/${commentId}/reply`, {
       method: 'POST',
-      body: JSON.stringify({
-        content
-      })
+      body: JSON.stringify({ content })
     });
 
     if (response.success) {
@@ -360,6 +473,11 @@ class BookReviewerAPI {
     }
 
     return response;
+  }
+  
+  // 兼容旧代码的别名
+  async replyToComment(commentId, content) {
+    return await this.replyComment(commentId, content);
   }
 
   /**
@@ -378,6 +496,97 @@ class BookReviewerAPI {
   }
 
   /**
+   * 获取用户资料
+   */
+  async getUserProfile(userId = null) {
+    const endpoint = userId ? `/profile/${userId}` : '/auth/profile';
+    return await this.request(endpoint);
+  }
+
+  /**
+   * 更新用户资料
+   */
+  async updateUserProfile(data) {
+    return await this.request('/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  /**
+   * 上传头像
+   */
+  /**
+   * 上传头像
+   * @param {File} file - 图片文件
+   * @returns {Promise<Object>} 返回包含 avatar_url 的对象
+   */
+  async uploadAvatar(file) {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    const url = `${this.baseURL}/profile/avatar`;
+    
+    try {
+      console.log('📡 API请求: POST /profile/avatar');
+      console.log('📷 文件信息:', {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`
+          // 注意：不要设置 Content-Type，让浏览器自动设置 multipart/form-data 边界
+        },
+        body: formData
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP ${response.status}`);
+      }
+      
+      console.log('✅ API响应成功:', data);
+      
+      // 提取并返回 avatar_url（兼容不同返回格式）
+      let avatarUrl = null;
+      
+      if (data.success && data.data && data.data.avatar_url) {
+        avatarUrl = data.data.avatar_url;
+      } else if (data.data && typeof data.data === 'string') {
+        avatarUrl = data.data;
+      } else if (data.avatar_url) {
+        avatarUrl = data.avatar_url;
+      }
+      
+      if (!avatarUrl) {
+        console.error('❌ 无法提取头像URL，完整响应:', data);
+        throw new Error('服务器未返回有效的头像URL');
+      }
+      
+      console.log('✅ 提取的头像URL:', avatarUrl);
+      return avatarUrl;
+      
+    } catch (error) {
+      console.error('❌ 头像上传失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 删除头像（恢复默认头像）
+   */
+  async deleteAvatar() {
+    return await this.request('/profile/avatar', {
+      method: 'DELETE'
+    });
+  }
+
+  /**
    * 检查是否已登录
    */
   isLoggedIn() {
@@ -390,166 +599,6 @@ class BookReviewerAPI {
   getCurrentUser() {
     const userInfo = localStorage.getItem('user_info');
     return userInfo ? JSON.parse(userInfo) : null;
-  }
-
-  /**
-   * 获取书籍列表
-   */
-  async getBooks(params = {}) {
-    const queryParams = new URLSearchParams();
-    
-    if (params.page) queryParams.append('page', params.page);
-    if (params.limit) queryParams.append('limit', params.limit);
-    // 注意：search功能暂未在后端实现
-    
-    const queryString = queryParams.toString();
-    const endpoint = queryString ? `/books?${queryString}` : '/books';
-    
-    return await this.request(endpoint);
-  }
-
-  /**
-   * 获取书籍详情
-   */
-  async getBook(bookId) {
-    return await this.request(`/books/${bookId}`);
-  }
-
-  /**
-   * 创建书籍
-   */
-  async createBook(bookData) {
-    return await this.request('/books', {
-      method: 'POST',
-      body: JSON.stringify(bookData)
-    });
-  }
-
-  /**
-   * 获取书评列表
-   */
-  async getReviews(params = {}) {
-    const queryParams = new URLSearchParams();
-    
-    if (params.page) queryParams.append('page', params.page);
-    if (params.limit) queryParams.append('limit', params.limit);
-    if (params.book_id) queryParams.append('book_id', params.book_id);
-    if (params.user_id) queryParams.append('user_id', params.user_id);
-    if (params.status) queryParams.append('status', params.status);
-    if (params.sort) queryParams.append('sort', params.sort);
-    
-    const queryString = queryParams.toString();
-    const endpoint = queryString ? `/reviews?${queryString}` : '/reviews';
-    
-    return await this.request(endpoint);
-  }
-
-  /**
-   * 获取书评详情
-   */
-  async getReview(reviewId) {
-    return await this.request(`/reviews/${reviewId}`);
-  }
-
-  /**
-   * 创建书评
-   */
-  async createReview(reviewData) {
-    return await this.request('/reviews', {
-      method: 'POST',
-      body: JSON.stringify(reviewData)
-    });
-  }
-
-  /**
-   * 更新书评
-   */
-  async updateReview(reviewId, reviewData) {
-    return await this.request(`/reviews/${reviewId}`, {
-      method: 'PUT',
-      body: JSON.stringify(reviewData)
-    });
-  }
-
-  /**
-   * 删除书评
-   */
-  async deleteReview(reviewId) {
-    return await this.request(`/reviews/${reviewId}`, {
-      method: 'DELETE'
-    });
-  }
-
-  /**
-   * 点赞书评
-   */
-  async likeReview(reviewId) {
-    return await this.request(`/likes/reviews/${reviewId}`, {
-      method: 'POST'
-    });
-  }
-
-  /**
-   * 取消点赞书评
-   */
-  async unlikeReview(reviewId) {
-    return await this.request(`/likes/reviews/${reviewId}`, {
-      method: 'DELETE'
-    });
-  }
-
-  /**
-   * 收藏书评
-   */
-  async favoriteReview(reviewId) {
-    return await this.request(`/favorites/reviews/${reviewId}`, {
-      method: 'POST'
-    });
-  }
-
-  /**
-   * 取消收藏书评
-   */
-  async unfavoriteReview(reviewId) {
-    return await this.request(`/favorites/reviews/${reviewId}`, {
-      method: 'DELETE'
-    });
-  }
-
-  /**
-   * 获取评论列表
-   */
-  async getComments(reviewId, params = {}) {
-    const queryParams = new URLSearchParams();
-    
-    if (params.page) queryParams.append('page', params.page);
-    if (params.limit) queryParams.append('limit', params.limit);
-    if (params.sort) queryParams.append('sort', params.sort);
-    
-    const queryString = queryParams.toString();
-    const endpoint = queryString ? `/comments/reviews/${reviewId}?${queryString}` : `/comments/reviews/${reviewId}`;
-    
-    return await this.request(endpoint);
-  }
-
-  /**
-   * 发表评论
-   */
-  async createComment(reviewId, content) {
-    return await this.request(`/comments/reviews/${reviewId}`, {
-      method: 'POST',
-      body: JSON.stringify({ content })
-    });
-  }
-
-  /**
-   * 回复评论
-   */
-  async replyComment(commentId, content) {
-    return await this.request(`/comments/${commentId}/reply`, {
-      method: 'POST',
-      body: JSON.stringify({ content })
-    });
   }
 
   /**

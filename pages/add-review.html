@@ -7,6 +7,11 @@
 
 <!-- API工具 -->
 <script src="../js/api.js"></script>
+<!-- 认证同步工具 -->
+<script src="../js/auth-sync.js"></script>
+
+<!-- Markdown 渲染库 -->
+<script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 
 <style>
 *{box-sizing:border-box}body{margin:0;background:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans",Arial}
@@ -40,6 +45,42 @@ select.input{cursor:pointer}
 .book-suggestion:hover{background:#f8f9fa}
 .book-suggestion:last-child{border-bottom:none}
 .help-text{font-size:12px;color:#666;margin-top:4px}
+
+/* Markdown 编辑器样式 */
+.editor-container{display:flex;gap:16px;margin-bottom:20px}
+.editor-panel{flex:1;min-width:0}
+.editor-panel.preview{background:#f8f9fa;padding:16px;border-radius:8px;border:1px solid #ddd;max-height:500px;overflow-y:auto}
+.panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.panel-title{font-size:14px;font-weight:600;color:#333}
+.toggle-preview{font-size:12px;color:#ff6a00;cursor:pointer;text-decoration:none}
+.toggle-preview:hover{text-decoration:underline}
+.markdown-toolbar{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.md-btn{padding:6px 10px;background:#fff;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;transition:all 0.2s}
+.md-btn:hover{background:#f0f0f0;border-color:#ccc}
+.char-counter{font-size:12px;color:#999;text-align:right;margin-top:4px}
+
+/* Markdown 预览样式 */
+.markdown-preview h1,.markdown-preview h2,.markdown-preview h3{margin:16px 0 8px;font-weight:600}
+.markdown-preview h1{font-size:22px;border-bottom:2px solid #eee;padding-bottom:6px}
+.markdown-preview h2{font-size:18px}
+.markdown-preview h3{font-size:16px}
+.markdown-preview p{margin:10px 0;line-height:1.6}
+.markdown-preview ul,.markdown-preview ol{margin:10px 0;padding-left:20px}
+.markdown-preview li{margin:4px 0}
+.markdown-preview blockquote{margin:12px 0;padding:10px 14px;border-left:4px solid #ff6a00;background:#fff;color:#666}
+.markdown-preview code{background:#f4f4f4;padding:2px 5px;border-radius:3px;font-family:monospace;font-size:13px}
+.markdown-preview pre{background:#f4f4f4;padding:10px;border-radius:5px;overflow-x:auto;margin:10px 0}
+.markdown-preview pre code{background:none;padding:0}
+.markdown-preview a{color:#ff6a00;text-decoration:underline}
+.markdown-preview img{max-width:100%;height:auto;border-radius:6px;margin:10px 0}
+.markdown-preview table{border-collapse:collapse;width:100%;margin:10px 0}
+.markdown-preview th,.markdown-preview td{border:1px solid #ddd;padding:8px;text-align:left}
+.markdown-preview th{background:#f8f9fa;font-weight:600}
+
+@media (max-width:768px){
+  .editor-container{flex-direction:column}
+  .editor-panel.preview{max-height:300px}
+}
 </style>
 </head>
 <body>
@@ -103,9 +144,55 @@ select.input{cursor:pointer}
       </div>
         
         <div class="form-group">
-          <label for="content">书评内容 *</label>
-          <textarea id="content" class="input" placeholder="分享您的读书感受和见解..." required></textarea>
-          <div class="help-text">至少10字，最多5000字</div>
+          <label>书评内容 * <span class="help-text">(支持 Markdown 格式)</span></label>
+          
+          <div class="editor-container">
+            <!-- 编辑区 -->
+            <div class="editor-panel">
+              <div class="panel-header">
+                <span class="panel-title">📝 编辑</span>
+                <a class="toggle-preview" onclick="togglePreview()">👁️ 切换预览</a>
+              </div>
+              
+              <!-- Markdown 工具栏 -->
+              <div class="markdown-toolbar">
+                <button type="button" class="md-btn" onclick="insertMarkdown('**', '**')" title="粗体">B</button>
+                <button type="button" class="md-btn" onclick="insertMarkdown('*', '*')" title="斜体">I</button>
+                <button type="button" class="md-btn" onclick="insertMarkdown('# ', '')" title="标题">#</button>
+                <button type="button" class="md-btn" onclick="insertMarkdown('> ', '')" title="引用">❝</button>
+                <button type="button" class="md-btn" onclick="insertMarkdown('- ', '')" title="列表">•</button>
+                <button type="button" class="md-btn" onclick="insertMarkdown('`', '`')" title="代码">&lt;/&gt;</button>
+                <button type="button" class="md-btn" onclick="insertMarkdown('[链接文字](', ')')" title="链接">🔗</button>
+              </div>
+              
+              <textarea 
+                id="content" 
+                class="input" 
+                placeholder="# 主标题&#10;&#10;## 副标题&#10;&#10;分享您的读书感受和见解...&#10;&#10;**提示**：支持 Markdown 语法，可以使用标题、列表、引用、代码等格式。"
+                required
+                oninput="updatePreview(); updateCharCount();"
+                style="min-height:300px;font-family:monospace;font-size:14px;line-height:1.6;"
+              ></textarea>
+              <div class="char-counter">
+                <span id="charCount">0</span> / 5000 字
+              </div>
+            </div>
+            
+            <!-- 预览区 -->
+            <div class="editor-panel preview" id="previewPanel">
+              <div class="panel-header">
+                <span class="panel-title">👁️ 预览</span>
+              </div>
+              <div id="markdownPreview" class="markdown-preview">
+                <p style="color:#999;text-align:center;padding:40px 0;">在左侧输入内容，这里会实时显示渲染效果...</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="help-text">
+            💡 至少10字，最多5000字 | 
+            <a href="https://www.markdownguide.org/basic-syntax/" target="_blank" style="color:#ff6a00;">Markdown 语法指南</a>
+      </div>
         </div>
         
         <div class="form-actions">
@@ -298,9 +385,10 @@ async function handleSubmit(e) {
         body: JSON.stringify({
           title: formData.bookTitle,
           author: formData.bookAuthor,
-          isbn: formData.isbn,
-          publisher: formData.publisher,
-          publishYear: formData.publishYear
+          isbn: formData.isbn || '',
+          publisher: formData.publisher || '',
+          publish_year: formData.publishYear,  // 修改为下划线命名
+          cover_url: ''  // 添加封面URL字段（暂时为空）
         })
       });
       
@@ -445,6 +533,100 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
+// ========== Markdown 编辑器功能 ==========
+
+// 更新 Markdown 预览
+function updatePreview() {
+  const content = document.getElementById('content').value;
+  const preview = document.getElementById('markdownPreview');
+  
+  if (!content.trim()) {
+    preview.innerHTML = '<p style="color:#999;text-align:center;padding:40px 0;">在左侧输入内容，这里会实时显示渲染效果...</p>';
+    return;
+  }
+  
+  if (typeof marked !== 'undefined') {
+    try {
+      // 配置 marked 选项
+      marked.setOptions({
+        breaks: true,        // 支持换行
+        gfm: true,          // 支持 GitHub 风格的 Markdown
+        headerIds: false,   // 禁用自动生成的标题 ID
+        mangle: false       // 禁用邮箱地址混淆
+      });
+      
+      preview.innerHTML = marked.parse(content);
+    } catch (error) {
+      console.error('❌ Markdown 渲染失败:', error);
+      preview.innerHTML = `<p style="color:#c33;">渲染失败: ${error.message}</p>`;
+    }
+  } else {
+    console.warn('⚠️ marked.js 未加载');
+    preview.innerHTML = content.replace(/\n/g, '<br>');
+  }
+}
+
+// 更新字数统计
+function updateCharCount() {
+  const content = document.getElementById('content').value;
+  const charCount = document.getElementById('charCount');
+  const length = content.length;
+  
+  charCount.textContent = length;
+  
+  // 根据字数变色
+  if (length > 5000) {
+    charCount.style.color = '#c33';
+  } else if (length > 4500) {
+    charCount.style.color = '#f90';
+  } else {
+    charCount.style.color = '#999';
+  }
+}
+
+// 插入 Markdown 语法
+function insertMarkdown(prefix, suffix) {
+  const textarea = document.getElementById('content');
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selectedText = textarea.value.substring(start, end);
+  const beforeText = textarea.value.substring(0, start);
+  const afterText = textarea.value.substring(end);
+  
+  // 如果没有选中文本，插入默认文本
+  const insertText = selectedText || '文本';
+  const newText = beforeText + prefix + insertText + suffix + afterText;
+  
+  textarea.value = newText;
+  
+  // 设置光标位置
+  const newCursorPos = start + prefix.length + insertText.length;
+  textarea.focus();
+  textarea.setSelectionRange(newCursorPos, newCursorPos);
+  
+  // 更新预览和字数
+  updatePreview();
+  updateCharCount();
+}
+
+// 切换预览显示（移动端）
+function togglePreview() {
+  const previewPanel = document.getElementById('previewPanel');
+  if (window.innerWidth <= 768) {
+    if (previewPanel.style.display === 'none') {
+      previewPanel.style.display = 'block';
+    } else {
+      previewPanel.style.display = 'none';
+    }
+  }
+}
+
+// 页面加载时初始化预览
+document.addEventListener('DOMContentLoaded', function() {
+  updatePreview();
+  updateCharCount();
+});
 
 console.log('📝 书评发布页面脚本加载完成');
 </script>

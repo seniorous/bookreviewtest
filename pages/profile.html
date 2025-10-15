@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人主页 - 书评管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 导航栏 */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 0;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 个人信息区 */
+        .profile-header {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .avatar-section {
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        .avatar-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 20px;
+        }
+
+        .avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 6px solid #667eea;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .avatar-upload {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            display: none; /* 默认隐藏，只有本人才显示 */
+        }
+
+        .avatar-upload:hover {
+            transform: scale(1.1);
+            background: #5a67d8;
+        }
+
+        .avatar-upload input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .user-info {
+            flex: 1;
+            padding-top: 20px;
+        }
+
+        .username {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .user-meta {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .signature-section {
+            margin-bottom: 20px;
+        }
+
+        .signature {
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+            font-style: italic;
+            color: #555;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+        }
+
+        .signature.empty {
+            color: #999;
+            font-style: normal;
+        }
+
+        .signature-edit {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .signature-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 80px;
+            max-height: 120px;
+        }
+
+        .signature-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .signature-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .privacy-settings {
+            margin-top: 20px;
+            display: none; /* 默认隐藏，只有本人才显示 */
+        }
+
+        .privacy-btn {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .privacy-btn:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+
+        /* 统计数据区 */
+        .stats-section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: #667eea;
+            border-radius: 2px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        /* 历史记录区 */
+        .history-section {
+            margin-bottom: 30px;
+        }
+
+        .history-list {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .history-item {
+            display: flex;
+            gap: 15px;
+            padding: 15px 0;
+            border-bottom: 1px solid #e0e0e0;
+            transition: background 0.3s ease;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-item:hover {
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 8px;
+            margin: 0 -10px;
+            padding: 15px 10px;
+        }
+
+        .history-icon {
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .history-content {
+            flex: 1;
+        }
+
+        .history-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .history-title:hover {
+            color: #667eea;
+        }
+
+        .history-meta {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .history-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 5px;
+        }
+
+        .history-stat {
+            color: #888;
+            font-size: 12px;
+        }
+
+        /* 加载状态 */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 错误状态 */
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        /* Toast 提示 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #333;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            background: #e74c3c;
+        }
+
+        .toast.success {
+            background: #27ae60;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+                gap: 20px;
+            }
+
+            .avatar-container {
+                width: 200px;
+                height: 200px;
+            }
+
+            .username {
+                font-size: 28px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 15px;
+            }
+
+            .stat-card {
+                padding: 20px;
+            }
+
+            .stat-number {
+                font-size: 28px;
+            }
+
+            .history-item {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .nav-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+
+        /* 隐私设置模态框 */
+        .privacy-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .privacy-modal.show {
+            display: flex;
+        }
+
+        .privacy-content {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .privacy-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .privacy-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .privacy-option:last-child {
+            border-bottom: none;
+        }
+
+        .privacy-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .privacy-switch.active {
+            background: #667eea;
+        }
+
+        .privacy-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .privacy-switch.active::after {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-content">
+            <a href="../index.html" class="logo">📚 书评系统</a>
+            <div class="nav-links">
+                <a href="../index.html">首页</a>
+                <a href="add-review.html">写书评</a>
+                <div id="auth-area">
+                    <!-- 动态加载登录/用户信息 -->
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="main-content">
+            <!-- 加载状态 -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>加载个人主页中...</p>
+            </div>
+
+            <!-- 错误状态 -->
+            <div id="error" class="error" style="display: none;">
+                <p id="error-message">加载失败，请稍后重试</p>
+            </div>
+
+            <!-- 个人信息区 -->
+            <div id="profile-content" style="display: none;">
+                <div class="profile-header">
+                    <div class="avatar-section">
+                        <div class="avatar-container">
+                            <img id="user-avatar" src="../backend/uploads/avatars/default.svg" alt="用户头像" class="avatar">
+                            <button id="avatar-upload-btn" class="avatar-upload" title="上传头像">
+                                📷
+                                <input type="file" id="avatar-input" accept="image/jpeg,image/jpg,image/png,image/gif">
+                            </button>
+                        </div>
+                    </div>
+                    <div class="user-info">
+                        <h1 id="username" class="username">用户名</h1>
+                        <div class="user-meta">
+                            <span id="join-date">加入时间：2024-01-01</span>
+                        </div>
+                        <div class="signature-section">
+                            <div id="signature-display" class="signature empty">
+                                这个人很懒，什么都没有留下...
+                            </div>
+                            <div id="signature-edit" class="signature-edit">
+                                <textarea id="signature-input" class="signature-input" placeholder="写下你的个性签名...（最多30字）" maxlength="30"></textarea>
+                                <div class="signature-controls">
+                                    <button id="signature-cancel" class="btn btn-secondary">取消</button>
+                                    <button id="signature-save" class="btn btn-primary">保存</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="privacy-settings" class="privacy-settings">
+                            <button id="privacy-btn" class="privacy-btn">🔒 隐私设置</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 统计数据区 -->
+                <div class="stats-section">
+                    <h2 class="section-title">📊 数据统计</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div id="reviews-count" class="stat-number">0</div>
+                            <div class="stat-label">发表书评</div>
+                        </div>
+                        <div class="stat-card">
+                            <div id="likes-received" class="stat-number">0</div>
+                            <div class="stat-label">获得点赞</div>
+                        </div>
+                        <div class="stat-card">
+                            <div id="favorites-count" class="stat-number">0</div>
+                            <div class="stat-label">收藏书评</div>
+                        </div>
+                        <div class="stat-card">
+                            <div id="favorites-received" class="stat-number">0</div>
+                            <div class="stat-label">获得收藏</div>
+                        </div>
+                        <div class="stat-card">
+                            <div id="comments-count" class="stat-number">0</div>
+                            <div class="stat-label">发表评论</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 我的书评 -->
+                <div class="history-section">
+                    <h2 class="section-title">📝 我的书评</h2>
+                    <div id="my-reviews" class="history-list">
+                        <!-- 动态加载 -->
+                    </div>
+                </div>
+
+                <!-- 我的收藏 -->
+                <div class="history-section">
+                    <h2 class="section-title">⭐ 我的收藏</h2>
+                    <div id="my-favorites" class="history-list">
+                        <!-- 动态加载 -->
+                    </div>
+                </div>
+
+                <!-- 我的评论 -->
+                <div class="history-section">
+                    <h2 class="section-title">💬 我的评论</h2>
+                    <div id="my-comments" class="history-list">
+                        <!-- 动态加载 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐私设置模态框 -->
+    <div id="privacy-modal" class="privacy-modal">
+        <div class="privacy-content">
+            <h3 class="privacy-title">隐私设置</h3>
+            <div class="privacy-option">
+                <span>头像可见性</span>
+                <div id="privacy-avatar" class="privacy-switch active" data-field="avatar"></div>
+            </div>
+            <div class="privacy-option">
+                <span>个人签名可见性</span>
+                <div id="privacy-signature" class="privacy-switch active" data-field="signature"></div>
+            </div>
+            <div class="privacy-option">
+                <span>统计数据可见性</span>
+                <div id="privacy-stats" class="privacy-switch active" data-field="stats"></div>
+            </div>
+            <div class="privacy-option">
+                <span>历史记录可见性</span>
+                <div id="privacy-history" class="privacy-switch active" data-field="history"></div>
+            </div>
+            <div style="text-align: right; margin-top: 20px;">
+                <button id="privacy-close" class="btn btn-secondary">关闭</button>
+                <button id="privacy-save" class="btn btn-primary">保存设置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast"></div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/auth-sync.js"></script>
+    <script>
+        // 全局变量
+        let currentUserId = null;
+        let currentUser = null;
+        let isOwnProfile = false;
+        let profileData = null;
+
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('📖 个人主页初始化...');
+            
+            try {
+                // 检查登录状态
+                await checkLoginStatus();
+                
+                // 获取URL参数中的用户ID
+                const urlParams = new URLSearchParams(window.location.search);
+                const targetUserId = urlParams.get('user');
+                
+                // 确定要显示的用户ID
+                if (targetUserId) {
+                    currentUserId = targetUserId;
+                    // 兼容不同的 ID 字段名
+                    const userId = currentUser?.id || currentUser?.userId || currentUser?.user_id;
+                    isOwnProfile = currentUser && userId == targetUserId;
+                } else {
+                    // 没有指定用户ID，显示当前登录用户的主页
+                    if (!currentUser) {
+                        showError('请先登录');
+                        return;
+                    }
+                    // 兼容不同的 ID 字段名（id、userId、user_id）
+                    currentUserId = currentUser.id || currentUser.userId || currentUser.user_id;
+                    if (!currentUserId) {
+                        console.error('❌ 无法获取用户ID，用户对象:', currentUser);
+                        showError('无法获取用户ID，请重新登录');
+                        return;
+                    }
+                    isOwnProfile = true;
+                }
+                
+                console.log('当前用户ID:', currentUserId);
+                console.log('是否本人主页:', isOwnProfile);
+                console.log('当前用户对象:', currentUser);
+                
+                // 加载用户资料
+                await loadUserProfile();
+                
+                // 绑定事件
+                bindEvents();
+                
+                console.log('✅ 个人主页初始化完成');
+            } catch (error) {
+                console.error('❌ 个人主页初始化失败:', error);
+                hideLoading();
+                showError('页面初始化失败: ' + error.message);
+            }
+        });
+
+        // 规范化用户对象，确保有 id 字段
+        function normalizeUser(user) {
+            if (!user) return null;
+            
+            // 确保 id 字段存在
+            if (!user.id && (user.userId || user.user_id)) {
+                user.id = user.userId || user.user_id;
+            }
+            
+            return user;
+        }
+        
+        // 检查登录状态
+        async function checkLoginStatus() {
+            const authArea = document.getElementById('auth-area');
+            
+            try {
+                // 首先检查本地是否有token和用户信息
+                if (api.isLoggedIn()) {
+                    console.log('🔍 检测到本地token，验证有效性...');
+                    
+                    // 尝试从localStorage获取用户信息
+                    const localUser = api.getCurrentUser();
+                    if (localUser) {
+                        console.log('📋 从本地获取用户信息:', localUser);
+                        currentUser = normalizeUser(localUser);
+                    }
+                    
+                    // 验证token有效性
+                    const response = await api.verifyToken();
+                    if (response.success && response.data) {
+                        // Token有效，更新用户信息
+                        currentUser = normalizeUser(response.data.user);
+                        console.log('✅ Token验证成功，用户已登录:', currentUser);
+                        
+                        authArea.innerHTML = `
+                            <a href="profile.html">👤 ${currentUser.username}</a>
+                            <button onclick="logout()" style="background: none; border: none; color: #333; cursor: pointer; padding: 8px 16px; border-radius: 8px;">退出</button>
+                        `;
+                    } else {
+                        // Token无效，清除本地数据
+                        console.log('❌ Token无效，清除登录状态');
+                        await api.logout();
+                        currentUser = null;
+                        authArea.innerHTML = `
+                            <a href="login.html">登录</a>
+                            <a href="register.html">注册</a>
+                        `;
+                    }
+                } else {
+                    console.log('📭 未检测到登录token');
+                    currentUser = null;
+                    authArea.innerHTML = `
+                        <a href="login.html">登录</a>
+                        <a href="register.html">注册</a>
+                    `;
+                }
+            } catch (error) {
+                console.error('❌ 检查认证状态失败:', error);
+                // 网络错误时，如果有本地用户信息，保持登录状态
+                const localUser = api.getCurrentUser();
+                if (localUser && api.isLoggedIn()) {
+                    console.log('🔄 网络错误，使用本地用户信息维持登录状态');
+                    currentUser = normalizeUser(localUser);
+                    authArea.innerHTML = `
+                        <a href="profile.html">👤 ${currentUser.username}</a>
+                        <button onclick="logout()" style="background: none; border: none; color: #333; cursor: pointer; padding: 8px 16px; border-radius: 8px;">退出</button>
+                    `;
+                } else {
+                    currentUser = null;
+                    authArea.innerHTML = `
+                        <a href="login.html">登录</a>
+                        <a href="register.html">注册</a>
+                    `;
+                }
+            }
+        }
+
+        // 加载用户资料
+        async function loadUserProfile() {
+            try {
+                console.log('🔍 调用API获取用户资料...');
+                
+                // 调用API获取用户资料
+                const response = await api.getUserProfile(currentUserId);
+                
+                console.log('✅ API响应:', response);
+                
+                // 提取 data 字段
+                if (response.success && response.data) {
+                    profileData = response.data;
+                    console.log('✅ 用户资料获取成功:', profileData);
+                    
+                    // 显示用户资料
+                    displayUserProfile();
+                    
+                    hideLoading();
+                    document.getElementById('profile-content').style.display = 'block';
+                } else {
+                    throw new Error(response.message || '获取用户资料失败');
+                }
+                
+            } catch (error) {
+                console.error('❌ 加载用户资料失败:', error);
+                hideLoading();
+                showError('加载用户资料失败: ' + error.message);
+            }
+        }
+
+        // 显示用户资料
+        function displayUserProfile() {
+            const { user, stats, history } = profileData;
+            
+            // 基本信息
+            document.getElementById('username').textContent = user.username;
+            document.getElementById('join-date').textContent = `加入时间：${formatDate(user.created_at)}`;
+            
+            // 处理头像URL（添加后端地址前缀）
+            let avatarSrc = '../backend/uploads/avatars/default.svg';
+            if (user.avatar_url) {
+                // 如果是相对路径，添加后端地址
+                if (user.avatar_url.startsWith('/')) {
+                    avatarSrc = `http://localhost:3001${user.avatar_url}`;
+                } else if (user.avatar_url.startsWith('http')) {
+                    avatarSrc = user.avatar_url;
+                } else {
+                    avatarSrc = user.avatar_url;
+                }
+            }
+            document.getElementById('user-avatar').src = avatarSrc;
+            
+            // 个人签名
+            const signatureDisplay = document.getElementById('signature-display');
+            if (user.signature && user.signature.trim()) {
+                signatureDisplay.textContent = user.signature;
+                signatureDisplay.classList.remove('empty');
+            } else {
+                signatureDisplay.textContent = '这个人很懒，什么都没有留下...';
+                signatureDisplay.classList.add('empty');
+            }
+            
+            // 统计数据
+            if (stats) {
+                document.getElementById('reviews-count').textContent = stats.reviews_count || 0;
+                document.getElementById('likes-received').textContent = stats.likes_received || 0;
+                document.getElementById('favorites-count').textContent = stats.favorites_count || 0;
+                document.getElementById('favorites-received').textContent = stats.favorites_received || 0;
+                document.getElementById('comments-count').textContent = stats.comments_count || 0;
+            } else {
+                // 隐私设置不允许查看统计数据
+                document.querySelector('.stats-section').style.display = 'none';
+            }
+            
+            // 显示/隐藏编辑功能
+            if (isOwnProfile) {
+                document.getElementById('avatar-upload-btn').style.display = 'block';
+                document.getElementById('privacy-settings').style.display = 'block';
+                
+                // 添加签名编辑功能
+                signatureDisplay.style.cursor = 'pointer';
+                signatureDisplay.title = '点击编辑签名';
+            }
+            
+            // 加载历史记录
+            loadHistoryData();
+        }
+
+        // 加载历史记录数据
+        function loadHistoryData() {
+            const { history } = profileData;
+            
+            if (!history) {
+                // 隐私设置不允许查看历史记录
+                document.querySelectorAll('.history-section').forEach(section => {
+                    section.style.display = 'none';
+                });
+                return;
+            }
+            
+            // 我的书评
+            const reviewsContainer = document.getElementById('my-reviews');
+            if (history.reviews && history.reviews.length > 0) {
+                reviewsContainer.innerHTML = history.reviews.map(review => `
+                    <div class="history-item">
+                        <div class="history-icon">📝</div>
+                        <div class="history-content">
+                            <a href="review-detail.html?id=${review.id}" class="history-title">${escapeHtml(review.title)}</a>
+                            <div class="history-meta">《${escapeHtml(review.book_title)}》- ${escapeHtml(review.book_author)}</div>
+                            <div class="history-stats">
+                                <span class="history-stat">⭐ ${review.rating}/5</span>
+                                <span class="history-stat">👁️ ${review.views}</span>
+                                <span class="history-stat">👍 ${review.likes_count}</span>
+                                <span class="history-stat">💬 ${review.comments_count}</span>
+                                <span class="history-stat">${formatDate(review.created_at)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                reviewsContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">暂无书评</p>';
+            }
+            
+            // 我的收藏
+            const favoritesContainer = document.getElementById('my-favorites');
+            if (history.favorites && history.favorites.length > 0) {
+                favoritesContainer.innerHTML = history.favorites.map(favorite => `
+                    <div class="history-item">
+                        <div class="history-icon">⭐</div>
+                        <div class="history-content">
+                            <a href="review-detail.html?id=${favorite.id}" class="history-title">${escapeHtml(favorite.title)}</a>
+                            <div class="history-meta">《${escapeHtml(favorite.book_title)}》- ${escapeHtml(favorite.book_author)} | 作者：${escapeHtml(favorite.author_name)}</div>
+                            <div class="history-stats">
+                                <span class="history-stat">⭐ ${favorite.rating}/5</span>
+                                <span class="history-stat">👁️ ${favorite.views}</span>
+                                <span class="history-stat">👍 ${favorite.likes_count}</span>
+                                <span class="history-stat">收藏于 ${formatDate(favorite.favorited_at)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                favoritesContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">暂无收藏</p>';
+            }
+            
+            // 我的评论
+            const commentsContainer = document.getElementById('my-comments');
+            if (history.comments && history.comments.length > 0) {
+                commentsContainer.innerHTML = history.comments.map(comment => `
+                    <div class="history-item">
+                        <div class="history-icon">💬</div>
+                        <div class="history-content">
+                            <a href="review-detail.html?id=${comment.review_id}" class="history-title">评论：${escapeHtml(comment.review_title)}</a>
+                            <div class="history-meta">《${escapeHtml(comment.book_title)}》- ${escapeHtml(comment.book_author)}</div>
+                            <div style="margin-top: 8px; color: #555; font-size: 14px;">${formatContent(escapeHtml(comment.content))}</div>
+                            <div class="history-stats">
+                                <span class="history-stat">${formatDate(comment.created_at)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                commentsContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">暂无评论</p>';
+            }
+        }
+
+        // 绑定事件
+        function bindEvents() {
+            // 签名编辑
+            if (isOwnProfile) {
+                const signatureDisplay = document.getElementById('signature-display');
+                const signatureEdit = document.getElementById('signature-edit');
+                const signatureInput = document.getElementById('signature-input');
+                const signatureSave = document.getElementById('signature-save');
+                const signatureCancel = document.getElementById('signature-cancel');
+                
+                signatureDisplay.addEventListener('click', () => {
+                    signatureInput.value = profileData.user.signature || '';
+                    signatureDisplay.style.display = 'none';
+                    signatureEdit.style.display = 'flex';
+                    signatureInput.focus();
+                });
+                
+                signatureCancel.addEventListener('click', () => {
+                    signatureEdit.style.display = 'none';
+                    signatureDisplay.style.display = 'flex';
+                });
+                
+                signatureSave.addEventListener('click', saveSignature);
+                
+                // 头像上传
+                const avatarInput = document.getElementById('avatar-input');
+                avatarInput.addEventListener('change', handleAvatarUpload);
+                
+                // 隐私设置
+                const privacyBtn = document.getElementById('privacy-btn');
+                const privacyModal = document.getElementById('privacy-modal');
+                const privacyClose = document.getElementById('privacy-close');
+                const privacySave = document.getElementById('privacy-save');
+                
+                privacyBtn.addEventListener('click', () => {
+                    privacyModal.classList.add('show');
+                    loadPrivacySettings();
+                });
+                
+                privacyClose.addEventListener('click', () => {
+                    privacyModal.classList.remove('show');
+                });
+                
+                privacySave.addEventListener('click', savePrivacySettings);
+                
+                // 隐私开关
+                document.querySelectorAll('.privacy-switch').forEach(switchEl => {
+                    switchEl.addEventListener('click', () => {
+                        switchEl.classList.toggle('active');
+                    });
+                });
+            }
+        }
+
+        // 保存签名
+        async function saveSignature() {
+            const signatureInput = document.getElementById('signature-input');
+            const newSignature = signatureInput.value.trim();
+            
+            if (newSignature.length > 30) {
+                showToast('签名不能超过30个字符', 'error');
+                return;
+            }
+            
+            try {
+                console.log('🔍 保存签名:', newSignature);
+                
+                // 调用API保存签名
+                await api.updateUserProfile({ signature: newSignature });
+                
+                // 更新显示
+                profileData.user.signature = newSignature;
+                const signatureDisplay = document.getElementById('signature-display');
+                const signatureEdit = document.getElementById('signature-edit');
+                
+                if (newSignature) {
+                    signatureDisplay.textContent = newSignature;
+                    signatureDisplay.classList.remove('empty');
+                } else {
+                    signatureDisplay.textContent = '这个人很懒，什么都没有留下...';
+                    signatureDisplay.classList.add('empty');
+                }
+                
+                signatureEdit.style.display = 'none';
+                signatureDisplay.style.display = 'flex';
+                
+                showToast('签名保存成功', 'success');
+                console.log('✅ 签名保存成功');
+            } catch (error) {
+                console.error('❌ 保存签名失败:', error);
+                showToast('保存签名失败: ' + error.message, 'error');
+            }
+        }
+
+        // 处理头像上传
+        async function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                console.log('⚠️ 没有选择文件');
+                return;
+            }
+            
+            console.log('📷 选择的文件:', {
+                name: file.name,
+                size: file.size,
+                type: file.type
+            });
+            
+            // 验证文件类型
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+            if (!allowedTypes.includes(file.type)) {
+                showToast('❌ 只支持 JPG、PNG、GIF 格式的图片', 'error');
+                event.target.value = ''; // 清空选择
+                return;
+            }
+            
+            // 验证文件大小（2MB）
+            const maxSize = 2 * 1024 * 1024;
+            if (file.size > maxSize) {
+                const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+                showToast(`❌ 图片大小为 ${sizeMB}MB，不能超过 2MB`, 'error');
+                event.target.value = ''; // 清空选择
+                return;
+            }
+            
+            // 检查登录状态
+            if (!api.isLoggedIn()) {
+                showToast('❌ 请先登录', 'error');
+                event.target.value = '';
+                return;
+            }
+            
+            try {
+                console.log('🔍 开始上传头像:', file.name, '大小:', (file.size / 1024).toFixed(2) + 'KB');
+                
+                // 显示上传中状态
+                const avatarImg = document.getElementById('user-avatar');
+                const uploadBtn = document.getElementById('avatar-upload-btn');
+                const originalSrc = avatarImg.src;
+                
+                // 禁用上传按钮，防止重复上传
+                uploadBtn.disabled = true;
+                uploadBtn.style.opacity = '0.5';
+                uploadBtn.innerHTML = '⏳';
+                
+                showToast('⏳ 正在上传头像...', 'info');
+                
+                // 临时显示预览（仅在本地）
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    avatarImg.style.opacity = '0.6';
+                    avatarImg.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+                
+                // 调用API上传头像
+                const result = await api.uploadAvatar(file);
+                
+                console.log('✅ 头像上传API返回:', result, '类型:', typeof result);
+                
+                // 提取头像URL（兼容不同返回格式）
+                let avatarUrl;
+                if (typeof result === 'string') {
+                    avatarUrl = result;
+                } else if (result && result.avatar_url) {
+                    avatarUrl = result.avatar_url;
+                } else if (result && result.data && result.data.avatar_url) {
+                    avatarUrl = result.data.avatar_url;
+                } else {
+                    throw new Error('无法从响应中提取头像URL');
+                }
+                
+                console.log('✅ 提取的头像URL:', avatarUrl);
+                
+                // 更新头像URL（添加时间戳避免缓存）
+                const newAvatarUrl = avatarUrl.includes('?') 
+                    ? `${avatarUrl}&t=${Date.now()}` 
+                    : `${avatarUrl}?t=${Date.now()}`;
+                
+                profileData.user.avatar_url = avatarUrl;
+                avatarImg.src = newAvatarUrl;
+                avatarImg.style.opacity = '1';
+                
+                // 清空文件选择，允许再次上传相同文件
+                event.target.value = '';
+                
+                showToast('✅ 头像上传成功！', 'success');
+                
+            } catch (error) {
+                console.error('❌ 上传头像失败:', error);
+                
+                // 恢复原始头像
+                const avatarImg = document.getElementById('user-avatar');
+                avatarImg.src = profileData.user.avatar_url || '../backend/uploads/avatars/default.svg';
+                avatarImg.style.opacity = '1';
+                
+                // 清空文件选择
+                event.target.value = '';
+                
+                // 显示详细错误信息
+                let errorMsg = '上传失败';
+                if (error.message) {
+                    errorMsg = error.message;
+                } else if (typeof error === 'string') {
+                    errorMsg = error;
+                }
+                
+                showToast(`❌ ${errorMsg}`, 'error');
+                
+            } finally {
+                // 恢复上传按钮状态
+                const uploadBtn = document.getElementById('avatar-upload-btn');
+                uploadBtn.disabled = false;
+                uploadBtn.style.opacity = '1';
+                uploadBtn.innerHTML = '📷';
+            }
+        }
+
+        // 加载隐私设置
+        function loadPrivacySettings() {
+            const settings = profileData.user.privacy_settings;
+            
+            Object.keys(settings).forEach(key => {
+                const switchEl = document.querySelector(`[data-field="${key}"]`);
+                if (switchEl) {
+                    if (settings[key]) {
+                        switchEl.classList.add('active');
+                    } else {
+                        switchEl.classList.remove('active');
+                    }
+                }
+            });
+        }
+
+        // 保存隐私设置
+        async function savePrivacySettings() {
+            const settings = {};
+            
+            document.querySelectorAll('.privacy-switch').forEach(switchEl => {
+                const field = switchEl.dataset.field;
+                settings[field] = switchEl.classList.contains('active');
+            });
+            
+            try {
+                console.log('🔍 保存隐私设置:', settings);
+                
+                // 调用API保存隐私设置
+                await api.updateUserProfile({ privacy_settings: settings });
+                
+                profileData.user.privacy_settings = settings;
+                document.getElementById('privacy-modal').classList.remove('show');
+                
+                showToast('隐私设置保存成功', 'success');
+                console.log('✅ 隐私设置保存成功');
+            } catch (error) {
+                console.error('❌ 保存隐私设置失败:', error);
+                showToast('保存隐私设置失败: ' + error.message, 'error');
+            }
+        }
+
+        // 退出登录
+        async function logout() {
+            try {
+                await api.logout();
+                showToast('退出登录成功', 'success');
+                setTimeout(() => {
+                    window.location.href = '../index.html';
+                }, 1000);
+            } catch (error) {
+                console.error('退出登录失败:', error);
+                showToast('退出登录失败: ' + error.message, 'error');
+            }
+        }
+
+        // 工具函数
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('error').style.display = 'block';
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        function formatContent(content) {
+            return content.replace(/\n/g, '<br>');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

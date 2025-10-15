@@ -7,6 +7,11 @@
 
 <!-- API工具类 -->
 <script src="../js/api.js"></script>
+<!-- 认证同步工具 -->
+<script src="../js/auth-sync.js"></script>
+
+<!-- Markdown 渲染库 -->
+<script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 
 <style>
 *{box-sizing:border-box}
@@ -46,6 +51,19 @@ a:hover{text-decoration:underline}
 
 /* 书评内容 */
 .review-content{font-size:16px;line-height:1.7;color:#333;margin-bottom:24px}
+.review-content h1,.review-content h2,.review-content h3{margin:20px 0 10px;font-weight:600}
+.review-content h1{font-size:24px;border-bottom:2px solid #eee;padding-bottom:8px}
+.review-content h2{font-size:20px}
+.review-content h3{font-size:18px}
+.review-content p{margin:12px 0}
+.review-content ul,.review-content ol{margin:12px 0;padding-left:24px}
+.review-content li{margin:6px 0}
+.review-content blockquote{margin:16px 0;padding:12px 16px;border-left:4px solid #ff6a00;background:#f8f9fa;color:#666}
+.review-content code{background:#f4f4f4;padding:2px 6px;border-radius:3px;font-family:monospace;font-size:14px}
+.review-content pre{background:#f4f4f4;padding:12px;border-radius:6px;overflow-x:auto;margin:12px 0}
+.review-content pre code{background:none;padding:0}
+.review-content a{color:#ff6a00;text-decoration:underline}
+.review-content img{max-width:100%;height:auto;border-radius:8px;margin:12px 0}
 
 /* 互动区域 */
 .interaction-bar{display:flex;align-items:center;gap:16px;padding:16px 0;border-top:1px solid #eee;border-bottom:1px solid #eee;margin-bottom:24px}
@@ -275,21 +293,53 @@ async function checkLoginStatus() {
       throw new Error('API未初始化');
     }
     
-    const response = await api.verifyToken();
-    if (response.success) {
-      currentUser = response.data.user;
-      console.log('✅ 用户已登录:', currentUser.username);
-      updateNavigation(true);
-      showCommentForm();
+    // 首先检查本地是否有token和用户信息
+    if (api.isLoggedIn()) {
+      console.log('🔍 检测到本地token，验证有效性...');
+      
+      // 尝试从localStorage获取用户信息
+      const localUser = api.getCurrentUser();
+      if (localUser) {
+        console.log('📋 从本地获取用户信息:', localUser);
+        currentUser = localUser;
+      }
+      
+      // 验证token有效性
+      const response = await api.verifyToken();
+      if (response.success && response.data) {
+        // Token有效，更新用户信息
+        currentUser = response.data.user;
+        console.log('✅ Token验证成功，用户已登录:', currentUser.username);
+        updateNavigation(true);
+        showCommentForm();
+      } else {
+        // Token无效，清除本地数据
+        console.log('❌ Token无效，清除登录状态');
+        await api.logout();
+        currentUser = null;
+        updateNavigation(false);
+        showLoginPrompt();
+      }
     } else {
-      console.log('ℹ️ 用户未登录');
+      console.log('📭 未检测到登录token');
+      currentUser = null;
       updateNavigation(false);
       showLoginPrompt();
     }
   } catch (error) {
-    console.log('检查登录状态失败:', error);
-    updateNavigation(false);
-    showLoginPrompt();
+    console.error('❌ 检查认证状态失败:', error);
+    // 网络错误时，如果有本地用户信息，保持登录状态
+    const localUser = api.getCurrentUser();
+    if (localUser && api.isLoggedIn()) {
+      console.log('🔄 网络错误，使用本地用户信息维持登录状态');
+      currentUser = localUser;
+      updateNavigation(true);
+      showCommentForm();
+    } else {
+      currentUser = null;
+      updateNavigation(false);
+      showLoginPrompt();
+    }
   }
 }
 
@@ -300,6 +350,7 @@ function updateNavigation(isLoggedIn) {
   if (isLoggedIn) {
     navButtons.innerHTML = `
       <a href="../pages/add-review.html" class="btn">发布书评</a>
+      <a href="../pages/profile.html" class="btn secondary">👤 个人主页</a>
       <button class="btn secondary" onclick="logout()">退出登录</button>
     `;
   } else {
@@ -397,6 +448,16 @@ function displayReviewDetail(data) {
     document.getElementById('reviewRating').textContent = '⭐'.repeat(review.rating) + ` (${review.rating}/5)`;
     document.getElementById('reviewDate').textContent = formatDate(review.created_at);
     document.getElementById('viewCount').textContent = review.views || 0;
+    
+    // 填充作者头像
+    const authorAvatar = document.getElementById('authorAvatar');
+    if (author.avatar_url) {
+      const avatarUrl = author.avatar_url.startsWith('/') 
+        ? `http://localhost:3001${author.avatar_url}` 
+        : author.avatar_url;
+      authorAvatar.innerHTML = `<img src="${avatarUrl}" alt="${author.username}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    }
+    
     console.log('✅ 书评基本信息已填充');
     
     // 填充书籍信息
@@ -823,7 +884,7 @@ function renderComment(comment, replies = []) {
     <div class="reply-item">
       <div class="comment-header">
         <div class="comment-author">
-          <div class="avatar"></div>
+          ${getAvatarHtml(reply.avatar_url, reply.username)}
           <span>${escapeHtml(reply.username)}</span>
           ${reply.user_id === comment.review_author_id ? '<span class="author-badge">作者</span>' : ''}
         </div>
@@ -841,7 +902,7 @@ function renderComment(comment, replies = []) {
     <div class="comment-item" data-comment-id="${comment.id}">
       <div class="comment-header">
         <div class="comment-author">
-          <div class="avatar"></div>
+          ${getAvatarHtml(comment.avatar_url, comment.username)}
           <span>${escapeHtml(comment.username)}</span>
           ${comment.user_id === comment.review_author_id ? '<span class="author-badge">作者</span>' : ''}
         </div>
@@ -921,9 +982,42 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// 生成头像 HTML
+function getAvatarHtml(avatarUrl, username = '') {
+  if (!avatarUrl) {
+    return '<div class="avatar"></div>';
+  }
+  
+  const fullUrl = avatarUrl.startsWith('/') 
+    ? `http://localhost:3001${avatarUrl}` 
+    : avatarUrl;
+  
+  return `<img src="${fullUrl}" alt="${escapeHtml(username)}" class="avatar" style="object-fit:cover;">`;
+}
+
 function formatContent(content) {
-  // 简单的内容格式化，将换行符转换为<br>
-  return content.replace(/\n/g, '<br>');
+  // 使用 marked.js 渲染 Markdown
+  if (typeof marked !== 'undefined') {
+    try {
+      // 配置 marked 选项
+      marked.setOptions({
+        breaks: true,        // 支持换行
+        gfm: true,          // 支持 GitHub 风格的 Markdown
+        headerIds: false,   // 禁用自动生成的标题 ID
+        mangle: false       // 禁用邮箱地址混淆
+      });
+      
+      return marked.parse(content);
+    } catch (error) {
+      console.error('❌ Markdown 渲染失败:', error);
+      // 降级：简单的换行符转换
+      return content.replace(/\n/g, '<br>');
+    }
+  } else {
+    console.warn('⚠️ marked.js 未加载，使用降级方案');
+    // 降级：简单的换行符转换
+    return content.replace(/\n/g, '<br>');
+  }
 }
 
 function showLoading() {

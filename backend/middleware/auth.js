@@ -19,9 +19,14 @@ const { query } = require('../database/mysql');
  * 用于保护需要登录的API接口
  */
 function authenticateToken(req, res, next) {
-  // 从请求头获取Authorization
+  // 优先级1: 从请求头获取 Authorization (Bearer Token)
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN格式
+  let token = authHeader && authHeader.split(' ')[1];
+
+  // 优先级2: 从 Cookie 获取 Token
+  if (!token && req.cookies) {
+    token = req.cookies.auth_token;
+  }
 
   // 检查令牌是否存在
   if (!token) {
@@ -82,7 +87,9 @@ function authenticateToken(req, res, next) {
 
       // 将用户信息添加到请求对象中
       req.user = {
-        userId: user.id,
+        id: user.id,           // 添加 id 字段（与数据库一致）
+        userId: user.id,       // 保留 userId（向后兼容）
+        user_id: user.id,      // 添加 user_id（snake_case，与数据库一致）
         email: user.email,
         username: user.username,
         role: user.role,
@@ -137,8 +144,14 @@ function requireAdmin(req, res, next) {
  * 用于可以匿名访问但登录后有额外功能的接口
  */
 function optionalAuth(req, res, next) {
+  // 优先级1: 从请求头获取 Authorization
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  let token = authHeader && authHeader.split(' ')[1];
+
+  // 优先级2: 从 Cookie 获取 Token
+  if (!token && req.cookies) {
+    token = req.cookies.auth_token;
+  }
 
   if (!token) {
     // 没有令牌，作为匿名用户继续
@@ -164,7 +177,9 @@ function optionalAuth(req, res, next) {
       if (users.length > 0) {
         const user = users[0];
         req.user = {
-          userId: user.id,
+          id: user.id,           // 添加 id 字段（与数据库一致）
+          userId: user.id,       // 保留 userId（向后兼容）
+          user_id: user.id,      // 添加 user_id（snake_case，与数据库一致）
           email: user.email,
           username: user.username,
           role: user.role,

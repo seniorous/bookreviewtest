@@ -45,11 +45,18 @@
         <div class="input"><span class="icon">🔒</span>
           <input name="password" type="password" placeholder="请输入登录密码" required>
         </div>
+        <div style="font-size:12px;color:#888;margin:8px 0;">💡 密码要求：至少8个字符，包含字母和数字</div>
+        
+        <!-- 记住我选项 -->
+        <div style="display:flex;align-items:center;gap:8px;margin:12px 0;font-size:14px;">
+          <input type="checkbox" id="rememberMe" name="rememberMe" style="cursor:pointer;">
+          <label for="rememberMe" style="cursor:pointer;user-select:none;">
+            记住我（30天内保持登录）
+          </label>
+        </div>
+        
         <button class="btn" type="submit">登录</button>
       </form>
-
-
-
 
       <div class="footer">
         <a href="register.html">免费注册</a>
@@ -75,9 +82,10 @@ document.getElementById('pwdForm').onsubmit = async (e) => {
     const formData = new FormData(e.target);
     const email = formData.get('email');
     const password = formData.get('password');
+    const rememberMe = formData.get('rememberMe') === 'on';  // 获取记住我选项
     
-    // 调用登录API
-    const response = await api.login(email, password);
+    // 调用登录API（传递 rememberMe 参数）
+    const response = await api.login(email, password, rememberMe);
     
     alert('登录成功！');
     location.href = '../index.html';

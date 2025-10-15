@@ -121,10 +121,20 @@ router.post('/register', rateLimit(5, 15), async (req, res) => {
       role: 'user'
     });
 
-    // 10. 记录成功日志
+    // 10. 设置 Cookie（注册默认使用 Session Cookie）
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/'
+    };
+    res.cookie('auth_token', token, cookieOptions);
+    console.log(`🔒 设置会话Cookie (Session): ${username}`);
+
+    // 11. 记录成功日志
     console.log(`✅ 用户注册成功: ${username} (ID: ${userId})`);
 
-    // 11. 返回成功响应（不包含敏感信息）
+    // 12. 返回成功响应（不包含敏感信息）
     res.status(201).json({
       success: true,
       message: '注册成功，欢迎加入书评管理系统！',
@@ -159,7 +169,7 @@ router.post('/register', rateLimit(5, 15), async (req, res) => {
  */
 router.post('/login', rateLimit(5, 15), async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe = false } = req.body;
 
     console.log(`🔐 用户登录请求: ${email}`);
 
@@ -222,10 +232,30 @@ router.post('/login', rateLimit(5, 15), async (req, res) => {
       [user.id]
     );
 
-    // 7. 记录成功日志
+    // 7. 设置 Cookie（根据 rememberMe 决定过期时间）
+    const cookieOptions = {
+      httpOnly: true,  // 防止 XSS 攻击
+      secure: process.env.NODE_ENV === 'production',  // 生产环境使用 HTTPS
+      sameSite: 'lax',  // 防止 CSRF 攻击
+      path: '/'
+    };
+
+    if (rememberMe) {
+      // 记住我：30天
+      cookieOptions.maxAge = 30 * 24 * 60 * 60 * 1000; // 30天（毫秒）
+      console.log(`🔒 设置持久Cookie (30天): ${user.username}`);
+    } else {
+      // 不记住：Session Cookie（关闭浏览器后失效）
+      // 不设置 maxAge 即为 Session Cookie
+      console.log(`🔒 设置会话Cookie (Session): ${user.username}`);
+    }
+
+    res.cookie('auth_token', token, cookieOptions);
+
+    // 8. 记录成功日志
     console.log(`✅ 用户登录成功: ${user.username} (${user.role})`);
 
-    // 8. 返回成功响应
+    // 9. 返回成功响应
     res.json({
       success: true,
       message: '登录成功，欢迎回来！',
@@ -521,15 +551,26 @@ router.get('/verify', authenticateToken, (req, res) => {
  * 注意：由于JWT是无状态的，客户端删除令牌即可实现退出
  */
 router.post('/logout', (req, res) => {
-  // 这里可以记录退出日志或清理服务端会话（如果有的话）
+  // 记录退出日志
   const authHeader = req.headers['authorization'];
-  if (authHeader) {
-    const token = authHeader.split(' ')[1];
+  const cookieToken = req.cookies?.auth_token;
+  
+  const token = authHeader ? authHeader.split(' ')[1] : cookieToken;
+  if (token) {
     const decoded = decodeToken(token);
     if (decoded) {
       console.log(`👋 用户退出登录: ${decoded.username}`);
     }
   }
+
+  // 清除 Cookie
+  res.clearCookie('auth_token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/'
+  });
+  console.log('🔒 已清除 auth_token Cookie');
 
   res.json({
     success: true,

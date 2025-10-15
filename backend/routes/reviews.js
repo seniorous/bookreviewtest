@@ -15,13 +15,14 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../database/mysql');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const validate = require('../middleware/validate');
 
 /**
  * 创建新书评
  * POST /api/reviews
  * 需要登录
  */
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, validate.reviews.create, async (req, res) => {
     try {
         const { book_id, title, content, rating } = req.body;
         const userId = req.user.userId;
@@ -145,9 +146,12 @@ router.get('/', async (req, res) => {
             'newest': 'ORDER BY r.created_at DESC',
             'oldest': 'ORDER BY r.created_at ASC',
             'rating_high': 'ORDER BY r.rating DESC, r.created_at DESC',
-            'rating_low': 'ORDER BY r.rating ASC, r.created_at DESC'
+            'rating_low': 'ORDER BY r.rating ASC, r.created_at DESC',
+            'hot': 'ORDER BY (r.likes_count * 3 + r.comments_count * 2 + r.views) DESC, r.created_at DESC',
+            'most_liked': 'ORDER BY r.likes_count DESC, r.created_at DESC',
+            'most_viewed': 'ORDER BY r.views DESC, r.created_at DESC'
         };
-        const orderClause = sortOptions[sort] || sortOptions['newest'];
+        const orderClause = sortOptions[sort] || sortOptions['hot'];
         
         // 查询书评列表 - 使用参数化查询
         const reviews = await query(

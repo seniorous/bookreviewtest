@@ -7,6 +7,8 @@
 
 <!-- API工具类 -->
 <script src="js/api.js"></script>
+<!-- 认证同步工具 -->
+<script src="js/auth-sync.js"></script>
 
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei","Helvetica Neue",Arial}
@@ -123,20 +125,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 // 检查认证状态
 async function checkAuthStatus() {
   try {
+    // 首先检查本地是否有token
     if (api.isLoggedIn()) {
+      console.log('🔍 检测到本地token，验证有效性...');
+      
+      // 尝试从localStorage获取用户信息
+      const localUser = api.getCurrentUser();
+      if (localUser) {
+        console.log('📋 从本地获取用户信息:', localUser);
+        currentUser = localUser;
+      }
+      
+      // 验证token有效性
       const response = await api.verifyToken();
-      if (response.success) {
+      if (response.success && response.data) {
+        // Token有效，更新用户信息
         currentUser = response.data.user;
-        console.log('✅ 用户已登录:', currentUser);
+        console.log('✅ Token验证成功，用户已登录:', currentUser);
+        
+        // 更新本地存储的用户信息
+        localStorage.setItem('user_info', JSON.stringify(currentUser));
       } else {
         // Token无效，清除本地数据
+        console.log('❌ Token无效，清除登录状态');
         await api.logout();
         currentUser = null;
       }
+    } else {
+      console.log('📭 未检测到登录token');
+      currentUser = null;
     }
   } catch (error) {
     console.error('❌ 检查认证状态失败:', error);
-    currentUser = null;
+    // 网络错误时，如果有本地用户信息，保持登录状态
+    const localUser = api.getCurrentUser();
+    if (localUser && api.isLoggedIn()) {
+      console.log('🔄 网络错误，使用本地用户信息维持登录状态');
+      currentUser = localUser;
+    } else {
+      currentUser = null;
+    }
   }
   
   renderAuthArea();
@@ -147,14 +175,26 @@ function renderAuthArea() {
   const authArea = document.getElementById('authArea');
   
   if (currentUser) {
+    // 处理头像URL
+    let avatarUrl = 'backend/uploads/avatars/default.svg';
+    if (currentUser.avatar_url) {
+      if (currentUser.avatar_url.startsWith('/')) {
+        avatarUrl = `http://localhost:3001${currentUser.avatar_url}`;
+      } else if (currentUser.avatar_url.startsWith('http')) {
+        avatarUrl = currentUser.avatar_url;
+      } else {
+        avatarUrl = currentUser.avatar_url;
+      }
+    }
+    
     authArea.innerHTML = `
       <div class="user-info">
-        <div class="avatar"></div>
-        <span>欢迎，${currentUser.username}</span>
+        <img src="${avatarUrl}" alt="头像" class="avatar" style="object-fit: cover;">
+        <a href="pages/profile.html" style="color: #333; text-decoration: none;">👤 ${currentUser.username}</a>
         <button class="btn secondary" onclick="logout()">退出</button>
       </div>
     `;
-  } else {
+    } else {
     authArea.innerHTML = `
       <a href="pages/login.html" class="btn secondary">登录</a>
       <a href="pages/register.html" class="btn">注册</a>

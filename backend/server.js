@@ -17,6 +17,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 require('dotenv').config();
 
@@ -28,6 +29,7 @@ const reviewRoutes = require('./routes/reviews');
 const likesRoutes = require('./routes/likes');
 const favoritesRoutes = require('./routes/favorites');
 const commentsRoutes = require('./routes/comments');
+const profileRoutes = require('./routes/profile');
 
 // 创建Express应用
 const app = express();
@@ -59,16 +61,12 @@ app.use(helmet({
 // CORS配置
 const corsOptions = {
   origin: function (origin, callback) {
-    // 允许的源列表
-    const allowedOrigins = [
-      'http://localhost:8080',
-      'http://127.0.0.1:8080', 
-      'http://localhost:3000',
-      'http://127.0.0.1:3000'
-    ];
+    // 从环境变量读取允许的源列表
+    const envOrigins = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').filter(Boolean);
+    const allowedOrigins = [...envOrigins];
     
     // 开发环境允许任何源
-    if (NODE_ENV === 'development') {
+    if (NODE_ENV === 'development' && origin) {
       allowedOrigins.push(origin);
     }
     
@@ -76,6 +74,7 @@ const corsOptions = {
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.warn(`⚠️  CORS拒绝源: ${origin}`);
       callback(new Error('CORS策略不允许此源'));
     }
   },
@@ -95,6 +94,9 @@ app.use(express.urlencoded({
   extended: true, 
   limit: '10mb' 
 }));
+
+// Cookie 解析中间件
+app.use(cookieParser());
 
 // 请求日志中间件
 app.use((req, res, next) => {
@@ -332,6 +334,9 @@ app.use('/api/favorites', favoritesRoutes);
 // 评论系统路由
 app.use('/api/comments', commentsRoutes);
 
+// 个人主页路由
+app.use('/api/profile', profileRoutes);
+
 // TODO: 其他路由将在后续步骤中添加
 // app.use('/api/admin', adminRoutes);
 // app.use('/api/upload', uploadRoutes);
@@ -339,6 +344,31 @@ app.use('/api/comments', commentsRoutes);
 /**
  * ===== 错误处理中间件 =====
  */
+
+// Celebrate 验证错误处理（必须在其他错误处理之前）
+const { errors: celebrateErrors, isCelebrateError } = require('celebrate');
+
+// 自定义 celebrate 错误日志中间件
+app.use((err, req, res, next) => {
+  if (isCelebrateError(err)) {
+    console.log(`❌ 请求验证失败: ${req.method} ${req.originalUrl}`);
+    
+    // 提取验证错误详情
+    const errorDetails = {};
+    for (const [segment, joiError] of err.details.entries()) {
+      errorDetails[segment] = joiError.details.map(detail => ({
+        field: detail.path.join('.'),
+        message: detail.message,
+        type: detail.type
+      }));
+    }
+    
+    console.log('📋 验证错误详情:', JSON.stringify(errorDetails, null, 2));
+  }
+  next(err);
+});
+
+app.use(celebrateErrors());
 
 // 404处理
 app.use((req, res) => {

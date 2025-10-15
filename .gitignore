@@ -3,6 +3,9 @@ config.js
 backend/.env
 backend/.env.local
 backend/.env.production
+.env
+.env.local
+.env.production
 .cursor
 # 依赖包
 node_modules/
@@ -25,3 +28,13 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# 测试文件
+test-*.html
+debug-*.html
+
+# 数据库迁移临时文件
+backend/database/migration-*.sql
+
+# 诊断脚本
+backend/diagnose.js
